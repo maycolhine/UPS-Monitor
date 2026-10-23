@@ -1,0 +1,18 @@
+# Dependências
+node_modules/
+
+# Artefatos de build
+dist/
+*.tsbuildinfo
+
+# Configuração local (pode conter endereços/portas específicos da rede)
+.env
+.env.local
+
+# Cobertura de testes / temporários
+coverage/
+*.log
+.DS_Store
+
+# Arquivos compartilhados entre projetos
+monitor/

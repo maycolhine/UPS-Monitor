@@ -1,0 +1,64 @@
+# =============================================================================
+# UPS Monitor — Web Viewer
+#
+#   cp .env.example .env      # ajuste UPS_API_BASE_URL
+#   docker compose up --build -d
+#   docker compose logs -f
+#   docker compose down
+#
+# O Compose lê o arquivo `.env` da mesma pasta para substituir as variáveis
+# `${...}` abaixo. Variáveis ausentes caem nos valores padrão.
+# =============================================================================
+
+services:
+  ups-web-viewer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ups-web-viewer:1.0.0
+    container_name: ups-web-viewer
+    restart: unless-stopped
+
+    # Porta publicada no host → porta interna do container.
+    # A porta interna já é a 8080 do backend; se escolher 8080 no host,
+    # ela conflita com a API de telemetria.
+    ports:
+      - "${VIEWER_HTTP_PORT:-8090}:8080"
+
+    environment:
+      VIEWER_HTTP_HOST: "0.0.0.0"
+      VIEWER_HTTP_PORT: "8080"
+      VIEWER_STATIC_DIR: "/app/public"
+
+      # Endereço da API de telemetria. Dentro do container `localhost` é o
+      # próprio container — use host.docker.internal ou o IP de rede do host.
+      UPS_API_BASE_URL: "${UPS_API_BASE_URL:-http://host.docker.internal:8080}"
+      # Vazio = descobre o equipamento por GET /api/v1/ups.
+      UPS_DEVICE_ID: "${UPS_DEVICE_ID:-}"
+
+      UPS_API_TIMEOUT_MS: "${UPS_API_TIMEOUT_MS:-4000}"
+      UPS_API_CACHE_TTL_MS: "${UPS_API_CACHE_TTL_MS:-1500}"
+      UPS_API_IDENTITY_TTL_MS: "${UPS_API_IDENTITY_TTL_MS:-60000}"
+
+      VIEWER_REFRESH_INTERVAL_MS: "${VIEWER_REFRESH_INTERVAL_MS:-5000}"
+      VIEWER_LOG_LEVEL: "${VIEWER_LOG_LEVEL:-info}"
+      # JSON opcional com as faixas provisórias dos gauges (ver .env.example).
+      VIEWER_GAUGE_THRESHOLDS: "${VIEWER_GAUGE_THRESHOLDS:-}"
+
+    # Faz `host.docker.internal` apontar para a máquina Ubuntu que hospeda a API
+    # (no Linux isso não é automático como no Docker Desktop).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8080/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3

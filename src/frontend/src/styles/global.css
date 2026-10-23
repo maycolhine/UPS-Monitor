@@ -1,0 +1,1384 @@
+/* ==========================================================================
+   UPS Monitor — Web Viewer
+   Painel em quatro quadrantes, no estilo videowall (inspirado na Torre de
+   Controle nstech): fundo escuro de alto contraste, tipografia Barlow, números
+   tabulares e medidores semicirculares com faixas semânticas.
+
+   Regras de UX preservadas (escopo §4.2/§6 e regra 30-ui-ux):
+   - a cor nunca é o único sinal de estado: todo medidor e aviso combina
+     cor + valor + rótulo textual;
+   - valor ausente nunca vira zero: aparece "Sem dados"/"Desatualizado";
+   - foco visível, contraste adequado, rótulos em dt/dd e caption/th nas tabelas;
+   - grades fluidas, sem rolagem horizontal.
+   ========================================================================== */
+
+:root {
+  /* Paleta institucional */
+  --brand: #ff3d03;
+  --brand-soft: rgba(255, 61, 3, 0.14);
+  --ink-strong: #ffffff;
+  --ink-secondary: #9ea8b8;
+  --line: #1d2335;
+
+  /* Superfícies */
+  --surface: #030408;
+  --panel: #070913;
+  --card: #0c101f;
+
+  /* Semântica operacional (medidores, avisos e flags) */
+  --sem-critical: #ef4444;
+  --sem-critical-soft: rgba(239, 68, 68, 0.14);
+  --sem-warning: #f59e0b;
+  --sem-warning-soft: rgba(245, 158, 11, 0.14);
+  --sem-good: #10b981;
+  --sem-good-soft: rgba(16, 185, 129, 0.13);
+  --sem-unknown: #9ea8b8;
+  --sem-unknown-soft: rgba(158, 168, 184, 0.12);
+  /* Rede ausente (na bateria) e teste em andamento: tons próprios da bolinha. */
+  --sem-alert: #fb923c;
+  --sem-alert-soft: rgba(251, 146, 60, 0.14);
+  --sem-active: #3b82f6;
+  --sem-active-soft: rgba(59, 130, 246, 0.16);
+
+  --radius: 12px;
+  --radius-sm: 8px;
+  --font: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--surface);
+  color: var(--ink-secondary);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--ink-strong);
+  margin: 0;
+  line-height: 1.2;
+}
+
+p {
+  margin: 0;
+}
+
+dl,
+dd,
+dt {
+  margin: 0;
+}
+
+button {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 20;
+  background: var(--brand);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 0 0 var(--radius-sm) 0;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.skip-link:focus {
+  left: 0;
+}
+
+/* ------------------------------------------------- Palco de 4 quadrantes --- */
+
+.stage {
+  height: 100vh;
+  height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: clamp(8px, 1.4vh, 20px);
+  padding: clamp(8px, 1.4vh, 20px);
+  overflow: hidden;
+}
+
+.stage__foot {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 0.72rem;
+  line-height: 1.25;
+  color: #5b6480;
+}
+
+.q {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, 1vh, 14px);
+  min-width: 0;
+  min-height: 0;
+  padding: clamp(10px, 1.5vh, 18px);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+  overflow: hidden auto;
+}
+
+.q--context {
+  border-top: 3px solid var(--brand);
+}
+
+.q__title,
+.panel__title {
+  flex: none;
+  font-size: clamp(0.78rem, 0.5vw + 0.6vh, 1rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-secondary);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 6px;
+}
+
+.panel__title {
+  margin-bottom: 10px;
+}
+
+/* Os dois quadrantes inferiores trazem os `<section class="panel">` originais. */
+.q > .panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  overflow: hidden auto;
+}
+
+/* ------------------------------------------------------------ Cabeçalho --- */
+
+.header {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.header__title {
+  font-size: clamp(1rem, 0.75vw + 1vh, 1.5rem);
+  letter-spacing: -0.01em;
+}
+
+/* Título à esquerda e a última leitura válida no canto superior direito. */
+.header__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+}
+
+.header__reading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  text-align: right;
+}
+
+.header__reading dt {
+  color: var(--ink-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.header__reading dd {
+  color: var(--ink-strong);
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.header__refresh-note {
+  font-size: 0.72rem;
+  color: var(--ink-secondary);
+}
+
+/* ------------------------------------------ Equipamentos descobertos --- */
+
+.devices {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.devices__label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--ink-secondary);
+}
+
+.devices__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.device {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+}
+
+/* Bolinha on/off do estado de comunicação, à direita do botão do equipamento.
+   A cor nunca é o único sinal: o `aria-label` descreve o estado. */
+.device__conn {
+  justify-self: end;
+  align-self: center;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  color: var(--sem-unknown);
+  background: var(--sem-unknown);
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* Seis níveis: cinza (sem dados), verde (OK), amarelo (atenção), laranja (na
+   bateria), vermelho (alerta crítico) e azul (teste em andamento). */
+.device__conn--unknown {
+  color: var(--sem-unknown);
+  background: var(--sem-unknown);
+}
+
+.device__conn--ok {
+  color: var(--sem-good);
+  background: var(--sem-good);
+}
+
+.device__conn--warning {
+  color: var(--sem-warning);
+  background: var(--sem-warning);
+}
+
+.device__conn--on_battery {
+  color: var(--sem-alert);
+  background: var(--sem-alert);
+}
+
+.device__conn--critical {
+  color: var(--sem-critical);
+  background: var(--sem-critical);
+}
+
+.device__conn--test {
+  color: var(--sem-active);
+  background: var(--sem-active);
+}
+
+.device--on {
+  border-left-color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.device__name {
+  color: var(--ink-strong);
+  font-weight: 700;
+  font-size: clamp(0.8rem, 0.4vw + 0.5vh, 0.98rem);
+  line-height: 1.15;
+}
+
+.device__id {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--ink-secondary);
+  word-break: break-all;
+}
+
+.device__tag {
+  align-self: flex-start;
+  margin-top: 3px;
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--ink-secondary);
+}
+
+/* A descrição reforça a cor da bolinha; o texto é o sinal principal. */
+.device__tag--ok {
+  color: var(--sem-good);
+}
+
+.device__tag--warning {
+  color: var(--sem-warning);
+}
+
+.device__tag--on_battery {
+  color: var(--sem-alert);
+}
+
+.device__tag--critical {
+  color: var(--sem-critical);
+}
+
+.device__tag--test {
+  color: var(--sem-active);
+}
+
+.device--on .device__tag {
+  color: var(--brand);
+}
+
+/* O item é um botão (acessível por teclado): zera a aparência padrão e mantém
+   o layout em coluna; a cor de identidade indica o equipamento em exibição. */
+.device__button {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.device:not(.device--on):hover {
+  border-left-color: var(--brand);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.device__button:hover .device__tag {
+  color: var(--ink-strong);
+}
+
+/* -------------------------------------------------------------- Avisos --- */
+
+.notices {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  align-items: baseline;
+  padding: 7px 12px;
+  border-radius: var(--radius-sm);
+  border-left: 4px solid var(--sem-unknown);
+  background: var(--sem-unknown-soft);
+  font-size: 0.76rem;
+}
+
+.notice__title {
+  color: var(--ink-strong);
+}
+
+.notice__message {
+  color: var(--ink-secondary);
+}
+
+.notice--critical {
+  border-left-color: var(--sem-critical);
+  background: var(--sem-critical-soft);
+}
+
+.notice--warning {
+  border-left-color: var(--sem-warning);
+  background: var(--sem-warning-soft);
+}
+
+.notice--info {
+  border-left-color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.loading {
+  flex: none;
+  padding: 12px;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--ink-secondary);
+  background: var(--card);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+}
+
+/* ------------------------------------------------------------- Painéis --- */
+
+.panel__empty {
+  padding: 10px 12px;
+  font-size: 0.76rem;
+  color: var(--ink-secondary);
+  background: var(--card);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.panel__warning {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-left: 4px solid var(--sem-warning);
+  background: var(--sem-warning-soft);
+  border-radius: var(--radius-sm);
+  font-size: 0.74rem;
+  color: var(--ink-strong);
+}
+
+.panel__bits {
+  margin-top: 6px;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--ink-secondary);
+}
+
+.warnings {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 0.72rem;
+  color: var(--ink-secondary);
+}
+
+/* -------------------------------------------------------------- Gauges --- */
+
+.gauge-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* Em zoom alto, o cartão precisa preservar três faixas internas (gauge,
+     legenda/estado e linha secundária). Se a área ficar curta demais, a grade
+     cresce e o quadrante rola, em vez de sobrepor conteúdo. */
+  grid-auto-rows: minmax(240px, 1fr);
+  align-content: start;
+  gap: clamp(6px, 1vh, 12px);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  min-height: 0;
+  padding: clamp(6px, 0.9vh, 12px) clamp(8px, 0.8vw, 14px);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.gauge {
+  flex: none;
+  min-height: auto;
+  margin: 0;
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 2px;
+}
+
+.gauge__svg {
+  /* O gauge é o dado principal do cartão: o piso de altura impede que o selo de
+     origem e a linha secundária (que crescem com a fonte do sistema) o
+     espremam a quase nada em telas com zoom/DPI alto. */
+  flex: none;
+  min-height: 120px;
+  width: 100%;
+  display: block;
+}
+
+.gauge__track {
+  stroke: #192033;
+  stroke-linecap: butt;
+}
+
+.gauge__band--critical {
+  stroke: var(--sem-critical);
+}
+
+.gauge__band--warning {
+  stroke: var(--sem-warning);
+}
+
+.gauge__band--good {
+  stroke: var(--sem-good);
+}
+
+.gauge__tick {
+  stroke: #4a5470;
+  stroke-width: 1.5;
+}
+
+.gauge__tick-label {
+  fill: var(--ink-secondary);
+  /* Rótulos nos limites das faixas: menores para caberem os limites próximos. */
+  font-size: 8px;
+  font-family: var(--font);
+}
+
+.gauge__needle {
+  stroke: var(--ink-strong);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.gauge__hub {
+  fill: var(--ink-strong);
+  stroke: var(--card);
+  stroke-width: 2;
+}
+
+.gauge__value {
+  font-size: 30px;
+  font-weight: 800;
+  fill: var(--ink-strong);
+  paint-order: stroke;
+  stroke: var(--card);
+  stroke-width: 7px;
+  stroke-linejoin: round;
+}
+
+.gauge__unit {
+  font-size: 12px;
+  fill: var(--ink-secondary);
+  paint-order: stroke;
+  stroke: var(--card);
+  stroke-width: 5px;
+  stroke-linejoin: round;
+}
+
+.gauge--empty .gauge__bands,
+.gauge--empty .gauge__track {
+  opacity: 0.28;
+}
+
+.gauge--empty .gauge__value {
+  fill: var(--sem-unknown);
+}
+
+.gauge--stale .gauge__svg {
+  opacity: 0.55;
+}
+
+.gauge__caption {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+  width: 100%;
+  min-height: 42px;
+  text-align: center;
+}
+
+.gauge__label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-weight: 600;
+  color: var(--ink-strong);
+  font-size: clamp(0.66rem, 0.35vw + 0.5vh, 0.86rem);
+  line-height: 1.15;
+  max-width: 100%;
+}
+
+.gauge__status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  font-weight: 700;
+  font-size: clamp(0.6rem, 0.3vw + 0.45vh, 0.78rem);
+  line-height: 1.15;
+  max-width: 100%;
+}
+
+.gauge__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--sem-unknown);
+  flex: none;
+  box-shadow: 0 0 7px currentColor;
+}
+
+.gauge__status--good {
+  color: var(--sem-good);
+}
+
+.gauge__status--good .gauge__dot {
+  background: var(--sem-good);
+}
+
+.gauge__status--warning {
+  color: var(--sem-warning);
+}
+
+.gauge__status--warning .gauge__dot {
+  background: var(--sem-warning);
+}
+
+.gauge__status--critical {
+  color: var(--sem-critical);
+}
+
+.gauge__status--critical .gauge__dot {
+  background: var(--sem-critical);
+}
+
+.gauge__status--unknown {
+  color: var(--sem-unknown);
+}
+
+.badge {
+  display: inline-block;
+  /* Teto em px para o selo não ofuscar o gauge em telas com fonte ampliada. */
+  font-size: clamp(0.5rem, 0.28vw + 0.35vh, 10px);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--sem-unknown-soft);
+  color: var(--ink-secondary);
+  border: 1px solid var(--line);
+}
+
+.badge--estimate {
+  background: var(--brand-soft);
+  border-color: rgba(255, 61, 3, 0.45);
+  color: #ff8a63;
+}
+
+.card__secondary {
+  flex: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 2px;
+  padding-top: 3px;
+  border-top: 1px dashed var(--line);
+  /* Teto em px: a linha complementar não cresce sem limite com a fonte do
+     sistema — quem precisa de espaço é o gauge. */
+  font-size: clamp(0.56rem, 0.3vw + 0.4vh, 11px);
+  text-align: center;
+}
+
+.card__secondary-label {
+  color: var(--ink-secondary);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.card__secondary-value {
+  color: var(--ink-strong);
+  font-weight: 700;
+  min-width: 0;
+  white-space: normal;
+  text-align: center;
+}
+
+/* --------------------------------------------------------------- Flags --- */
+
+.flag-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.flag {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 3px 10px;
+  align-items: center;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-left-width: 4px;
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  font-size: 0.78rem;
+}
+
+/* Tom da barra lateral do card (ver `flagTone`): verde = normal, laranja =
+   rede ausente, vermelho = crítico, azul = teste em andamento, amarelo =
+   desligamento, cinza = estado inativo. */
+.flag--good {
+  border-left-color: var(--sem-good);
+}
+
+.flag--warning {
+  border-left-color: var(--sem-warning);
+}
+
+.flag--on_battery {
+  border-left-color: var(--sem-alert);
+}
+
+.flag--critical {
+  border-left-color: var(--sem-critical);
+}
+
+.flag--test {
+  border-left-color: var(--sem-active);
+}
+
+.flag--neutral {
+  border-left-color: var(--sem-unknown);
+}
+
+.flag--on {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.flag--off {
+  opacity: 0.55;
+}
+
+.flag__id {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--ink-strong);
+  background: var(--sem-unknown-soft);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0 5px;
+}
+
+.flag__label {
+  color: var(--ink-strong);
+}
+
+.flag__hint {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--ink-secondary);
+}
+
+.flag__description {
+  grid-column: 1 / -1;
+  font-size: 0.7rem;
+  color: var(--ink-secondary);
+}
+
+/* ------------------------------------------------------------- Detalhes --- */
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-content: start;
+}
+
+.details-block {
+  min-width: 0;
+}
+
+.details-block:last-child {
+  grid-column: 1 / -1;
+}
+
+.details-block h3 {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-secondary);
+  margin-bottom: 6px;
+}
+
+.kv {
+  display: grid;
+  gap: 4px;
+}
+
+.kv > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid rgba(29, 35, 53, 0.7);
+  font-size: 0.74rem;
+}
+
+.kv dt {
+  color: var(--ink-secondary);
+}
+
+.kv dd {
+  color: var(--ink-strong);
+  font-weight: 600;
+  text-align: right;
+}
+
+.kv__mono {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  word-break: break-all;
+}
+
+/* Variante compacta: usada no bloco "Serviço de telemetria e consultas", onde
+   as linhas trazem pouca informação e não precisam do respiro da tabela .kv. */
+.kv--tight > div {
+  padding-bottom: 2px;
+  font-size: 0.7rem;
+}
+
+.sources {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+}
+
+.sources th,
+.sources td {
+  text-align: left;
+  padding: 4px 6px;
+  border-bottom: 1px solid rgba(29, 35, 53, 0.7);
+}
+
+.sources thead th {
+  color: var(--ink-secondary);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--line);
+}
+
+.sources td {
+  color: var(--ink-strong);
+}
+
+.sources__path {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+}
+
+/* ------------------------------------------------------------ Botões --- */
+
+.btn {
+  flex: none;
+  padding: 6px 14px;
+  border: 1px solid var(--brand);
+  border-radius: var(--radius-sm);
+  background: var(--brand);
+  color: #fff;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) {
+  background: #ff5a2a;
+  border-color: #ff5a2a;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--ink-secondary);
+  border-color: var(--line);
+}
+
+.btn--ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--ink-secondary);
+  color: var(--ink-strong);
+}
+
+/* ------------------------------------------------- Teste de bateria --- */
+
+.battery-test__head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 6px;
+  margin-bottom: 10px;
+}
+
+.battery-test__head .panel__title {
+  border-bottom: 0;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.battery-test__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.battery-test__meta {
+  flex: none;
+  font-size: 0.7rem;
+  color: var(--ink-secondary);
+}
+
+.battery-test__guards {
+  flex: none;
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 0.7rem;
+  color: var(--sem-warning);
+}
+
+.battery-test__progress {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.battery-test__bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.battery-test__bar > span {
+  display: block;
+  height: 100%;
+  background: var(--brand);
+  transition: width 0.3s linear;
+}
+
+.battery-test__progress-text {
+  font-size: 0.68rem;
+  color: var(--ink-secondary);
+}
+
+.battery-test__grid {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.battery-test__card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.battery-test__card-label {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--ink-secondary);
+}
+
+.battery-test__card-line {
+  font-size: 0.7rem;
+  color: var(--ink-secondary);
+}
+
+.battery-test__chip {
+  align-self: flex-start;
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: var(--ink-strong);
+}
+
+.battery-test__chip--running {
+  color: var(--sem-warning);
+}
+
+.battery-test__chip--completed {
+  color: var(--sem-good);
+}
+
+.battery-test__chip--aborted,
+.battery-test__chip--failed,
+.battery-test__chip--aborting {
+  color: var(--sem-critical);
+}
+
+.battery-test__estimate {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--ink-strong);
+}
+
+.battery-test__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+  margin-top: 10px;
+}
+
+.battery-test__table th,
+.battery-test__table td {
+  text-align: left;
+  padding: 4px 6px;
+  border-bottom: 1px solid rgba(29, 35, 53, 0.7);
+}
+
+.battery-test__table thead th {
+  color: var(--ink-secondary);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--line);
+}
+
+.battery-test__table tbody th {
+  color: var(--ink-strong);
+  font-weight: 600;
+}
+
+.battery-test__table td {
+  color: var(--ink-secondary);
+}
+
+.battery-test__delta {
+  color: var(--ink-strong) !important;
+  font-weight: 700;
+}
+
+.battery-test__idle {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  background: var(--card);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+  font-size: 0.72rem;
+  color: var(--ink-secondary);
+}
+
+.battery-test__idle ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.battery-test__section-label {
+  display: block;
+  margin-top: 12px;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--ink-secondary);
+}
+
+.battery-test__type select {
+  padding: 5px 8px;
+  background: var(--card);
+  color: var(--ink-strong);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-size: 0.72rem;
+}
+
+/* Fração desconhecida (teste por alvo sem amostra de carga): barra neutra. */
+.battery-test__bar > .battery-test__bar-fill--pending {
+  background: var(--ink-secondary);
+}
+
+/* -------------------- Bloco B: gráficos e blocos selecionáveis --- */
+
+.bt-charts {
+  flex: none;
+  display: grid;
+  /* Os blocos de métrica ficam SEMPRE acima do gráfico, em faixa horizontal:
+     com a barra lateral o gráfico perdia largura e a leitura ficava ruim. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.bt-charts__list {
+  display: grid;
+  /* 1×4 (uma linha, quatro colunas) quando couber; 2×2 em telas estreitas. */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bt-charts__block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  text-align: left;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--ink-secondary);
+  cursor: pointer;
+}
+
+.bt-charts__block:hover {
+  border-color: var(--ink-secondary);
+  color: var(--ink-strong);
+}
+
+.bt-charts__block--active {
+  border-left-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--ink-strong);
+}
+
+.bt-charts__block-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.bt-charts__block-value {
+  font-size: 0.66rem;
+  color: var(--ink-secondary);
+}
+
+.bt-charts__figure {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  padding: 8px 10px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.bt-charts__caption {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.bt-charts__caption-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ink-strong);
+}
+
+.bt-charts__caption-unit {
+  font-size: 0.66rem;
+  color: var(--ink-secondary);
+}
+
+.bt-charts__svg {
+  width: 100%;
+  height: auto;
+}
+
+.bt-charts__grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.bt-charts__axis {
+  fill: var(--ink-secondary);
+  /* Em `rem`: o rótulo do eixo acompanha a fonte do sistema, então continua
+     legível quando a tela amplia o texto (zoom/DPI alto). */
+  font-size: 0.75rem;
+}
+
+.bt-charts__line {
+  fill: none;
+  stroke: var(--brand);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.bt-charts__reference {
+  stroke: var(--sem-warning);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.bt-charts__reference-label {
+  fill: var(--sem-warning);
+  font-size: 0.75rem;
+}
+
+.bt-charts__unavailable {
+  font-size: 0.72rem;
+  color: var(--ink-secondary);
+}
+
+/* ----------------------------------------------------------- Rolagem --- */
+
+.q::-webkit-scrollbar,
+.q > .panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.q::-webkit-scrollbar-thumb,
+.q > .panel::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 999px;
+}
+
+/* --------------------------------------------------------- Responsivo --- */
+
+/* Os blocos de métrica do teste de bateria: 4 colunas enquanto houver largura
+   (o quadrante ocupa ~metade da tela no layout de 2×2); abaixo disso, 2×2. */
+@media (max-width: 1100px) {
+  .bt-charts__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .stage {
+    height: auto;
+    min-height: 100dvh;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    grid-auto-rows: auto;
+    overflow: visible;
+  }
+
+  .q {
+    overflow: visible;
+  }
+
+  .q > .panel {
+    overflow: visible;
+  }
+
+  .gauge-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-auto-rows: auto;
+  }
+
+  .gauge__svg {
+    flex: none;
+    height: clamp(120px, 26vw, 170px);
+  }
+
+  .details-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .details-block:last-child {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 420px) {
+  .gauge-grid,
+  .flag-list,
+  .battery-test__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .header__top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header__reading {
+    text-align: left;
+  }
+
+  .kv > div {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .kv dd {
+    text-align: left;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

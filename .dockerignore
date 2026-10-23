@@ -1,0 +1,23 @@
+# Tudo que não deve entrar no contexto de build
+node_modules
+**/node_modules
+**/dist
+**/coverage
+**/*.log
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+docs
+.trae
+**/__tests__
+**/*.test.ts
+**/*.test.tsx
+.vscode
+.idea
+Dockerfile
+compose.yaml
+docker-compose.yml
+*.md
+!README.md

@@ -1,5 +1,5 @@
 /**
- * Sobe o servidor do Web Viewer em uma porta livre, apontando para um upstream falso.
+ * Starts the Web Viewer server on a free port, pointing to a fake upstream.
  */
 import type { AddressInfo } from "node:net";
 

@@ -1,15 +1,15 @@
 /**
- * Cliente HTTP isolado da API de telemetria.
+ * HTTP client isolated from the telemetry API.
  *
- * Regras:
- *  - A LEITURA é SOMENTE GET.
- *  - A única escrita admitida é `POST` nas rotas de teste de bateria
- *    (`/api/v1/ups/{device_id}/tests`, `.../tests/{test_id}/abort`), previstas no
- *    contrato 3.0. Qualquer outro método é recusado localmente
- *    (`viewer_invalid_method`), sem tocar a rede.
- *  - Nunca lança exceção para o chamador: devolve um resultado discriminado com
- *    timeout, indisponibilidade, JSON inválido e códigos HTTP separados.
- *  - Não acessa porta serial nem qualquer recurso local do equipamento.
+ * Rules:
+ *  - READ operations are GET ONLY.
+ *  - The only write accepted is `POST` on the battery test routes
+ *    (`/api/v1/ups/{device_id}/tests`, `.../tests/{test_id}/abort`), defined in
+ *    contract 3.0. Any other method is rejected locally
+ *    (`viewer_invalid_method`), without touching the network.
+ *  - Never throws for the caller: returns a discriminated result with
+ *    timeout, unavailability, invalid JSON and HTTP codes kept separate.
+ *  - Does not access the serial port nor any local resource of the equipment.
  */
 
 export type UpstreamFailureCode =
@@ -21,7 +21,7 @@ export type UpstreamFailureCode =
   | "viewer_invalid_method"
   | "viewer_internal_error";
 
-/** Métodos que o Web Viewer pode enviar à API de origem. */
+/** Methods the Web Viewer may send to the upstream API. */
 const ALLOWED_METHODS = ["GET", "POST"] as const;
 
 export interface UpstreamSuccess {
@@ -69,9 +69,9 @@ export class UpstreamApiClient {
   }
 
   /**
-   * `POST` reservado às rotas de teste de bateria do contrato 3.0. Corpo vazio
-   * equivale a `{}` (o filtro de escrita é feito pelo serviço, que só chama
-   * este método para `/tests`).
+   * `POST` reserved for the battery test routes of contract 3.0. An empty body
+   * is equivalent to `{}` (the write filter is enforced by the service, which only
+   * calls this method for `/tests`).
    */
   async post(path: string, body?: unknown): Promise<UpstreamResult> {
     return this.request("POST", path, body);
@@ -85,7 +85,7 @@ export class UpstreamApiClient {
       return {
         ok: false,
         code: "viewer_invalid_method",
-        message: `o Web Viewer só envia GET (e POST nas rotas de teste); recebido '${method}'`,
+        message: `the Web Viewer only sends GET (and POST on the test routes); received '${method}'`,
         status: null,
         durationMs: 0,
         url,
@@ -115,7 +115,7 @@ export class UpstreamApiClient {
         return {
           ok: false,
           code: "upstream_invalid_json",
-          message: `resposta não é JSON válido: ${(error as Error).message}`,
+          message: `response is not valid JSON: ${(error as Error).message}`,
           status: response.status,
           durationMs: Date.now() - startedAt,
           url,
@@ -131,7 +131,7 @@ export class UpstreamApiClient {
         return {
           ok: false,
           code: "upstream_timeout",
-          message: `sem resposta em ${this.timeoutMs} ms`,
+          message: `no response within ${this.timeoutMs} ms`,
           status: null,
           durationMs,
           url,

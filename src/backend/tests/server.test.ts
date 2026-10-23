@@ -48,8 +48,8 @@ const okRoutes = () => ({
 
 const notFound = { status: 404, payload: deviceNotFound };
 
-describe("GET /api/dashboard — caminho feliz", () => {
-  it("repassa a telemetria sem renomear nem reinterpretar campos", async () => {
+describe("GET /api/dashboard — happy path", () => {
+  it("forwards the telemetry without renaming or reinterpreting fields", async () => {
     upstream = await startFakeUpstream((req, res, requests) => {
       const route = okRoutes()[req.url as keyof ReturnType<typeof okRoutes>];
       respondJson(res, route ? route.status : 404, route ? route.payload : deviceNotFound);
@@ -73,15 +73,15 @@ describe("GET /api/dashboard — caminho feliz", () => {
     expect(body.viewer.upstream_contract).toEqual({ api_version: "v1", contract_version: "3.0" });
     expect(body.viewer.warnings).toEqual([]);
     expect(body.viewer.sources.telemetry).toMatchObject({ ok: true, http_status: 200, error: null });
-    // O histórico do teste de bateria (contrato 3.0) acompanha o dashboard.
+    // The battery test history (contract 3.0) accompanies the dashboard.
     expect(body.tests).toEqual(testsListOk);
     expect(body.viewer.sources.tests).toMatchObject({ ok: true, http_status: 200, error: null });
   });
 
-  it("não derruba o dashboard quando o histórico do teste não existe (404 na API)", async () => {
+  it("does not bring down the dashboard when the test history does not exist (404 in the API)", async () => {
     upstream = await startFakeUpstream((req, res) => {
       if (req.url?.includes("/tests")) {
-        respondJson(res, 404, { api_version: "v1", contract_version: "3.0", error: { code: "not_found", message: "sem histórico" } });
+        respondJson(res, 404, { api_version: "v1", contract_version: "3.0", error: { code: "not_found", message: "no history" } });
         return;
       }
       const route = okRoutes()[req.url as keyof ReturnType<typeof okRoutes>];
@@ -95,11 +95,11 @@ describe("GET /api/dashboard — caminho feliz", () => {
     expect(body.tests).toBeNull();
     expect(body.viewer.sources.tests.ok).toBe(true);
     expect(body.viewer.sources.tests.error.code).toBe("upstream_unexpected_status");
-    // A ausência do histórico não contamina os avisos globais do painel.
+    // The absence of the history does not contaminate the panel's global warnings.
     expect(body.viewer.warnings).toEqual([]);
   });
 
-  it("descobre o equipamento por /api/v1/ups quando UPS_DEVICE_ID está vazio", async () => {
+  it("discovers the device via /api/v1/ups when UPS_DEVICE_ID is empty", async () => {
     upstream = await startFakeUpstream((req, res) => {
       const route = okRoutes()[req.url as keyof ReturnType<typeof okRoutes>];
       respondJson(res, route ? route.status : 404, route ? route.payload : deviceNotFound);
@@ -114,7 +114,7 @@ describe("GET /api/dashboard — caminho feliz", () => {
     expect(telemetryRequest?.url).toBe(`/api/v1/ups/${deviceId}/telemetry`);
   });
 
-  it("usa o device_id de /health quando a lista de equipamentos vem vazia", async () => {
+  it("uses the device_id from /health when the device list comes back empty", async () => {
     upstream = await startFakeUpstream((req, res) => {
       if (req.url === "/api/v1/ups") {
         respondJson(res, 200, devicesEmpty);
@@ -131,7 +131,7 @@ describe("GET /api/dashboard — caminho feliz", () => {
     expect(body.viewer.device_id).toBe(deviceId);
   });
 
-  it("respeita UPS_DEVICE_ID fixado e não consulta a lista de equipamentos", async () => {
+  it("respects a pinned UPS_DEVICE_ID and does not query the device list", async () => {
     upstream = await startFakeUpstream((req, res) => {
       const route = okRoutes()[req.url as keyof ReturnType<typeof okRoutes>];
       respondJson(res, route ? route.status : 404, route ? route.payload : deviceNotFound);
@@ -144,7 +144,7 @@ describe("GET /api/dashboard — caminho feliz", () => {
     expect(upstream.requests.some((request) => request.url === "/api/v1/ups")).toBe(false);
   });
 
-  it("?device_id= escolhe qual nobreak é exibido (SMS, outro protocolo)", async () => {
+  it("?device_id= chooses which UPS is displayed (SMS, another protocol)", async () => {
     upstream = await startFakeUpstream((req, res) => {
       if (req.url === `/api/v1/ups/${smsDeviceId}/telemetry`) {
         respondJson(res, 200, telemetrySms);
@@ -168,21 +168,21 @@ describe("GET /api/dashboard — caminho feliz", () => {
     expect(body.telemetry.data.status.raw_byte).toBe(41);
   });
 
-  it("?device_id= desconhecido → 404 device_not_found (sem consultar às cegas)", async () => {
+  it("?device_id= unknown → 404 device_not_found (without querying blindly)", async () => {
     upstream = await startFakeUpstream((req, res) => {
       const route = okRoutes()[req.url as keyof ReturnType<typeof okRoutes>];
       respondJson(res, route ? route.status : 404, route ? route.payload : deviceNotFound);
     });
     viewer = await startViewer({ upstreamBaseUrl: upstream.baseUrl });
 
-    const { status, body } = await getJson(`${viewer.baseUrl}/api/dashboard?device_id=inexistente`);
+    const { status, body } = await getJson(`${viewer.baseUrl}/api/dashboard?device_id=nonexistent`);
 
     expect(status).toBe(404);
     expect(body.error.code).toBe("device_not_found");
-    expect(upstream.requests.some((request) => request.url.includes("/inexistente/"))).toBe(false);
+    expect(upstream.requests.some((request) => request.url.includes("/nonexistent/"))).toBe(false);
   });
 
-  it("usa exclusivamente GET na API de origem", async () => {
+  it("uses only GET on the upstream API", async () => {
     upstream = await startFakeUpstream((req, res) => {
       const route = okRoutes()[req.url as keyof ReturnType<typeof okRoutes>];
       respondJson(res, route ? route.status : 404, route ? route.payload : deviceNotFound);
@@ -196,8 +196,8 @@ describe("GET /api/dashboard — caminho feliz", () => {
   });
 });
 
-describe("GET /api/dashboard — estados degradados e falhas", () => {
-  it("telemetria desatualizada (503 + stale) → 200 com aviso explícito e data preservado", async () => {
+describe("GET /api/dashboard — degraded states and failures", () => {
+  it("stale telemetry (503 + stale) → 200 with an explicit warning and data preserved", async () => {
     upstream = await startFakeUpstream((req, res) => {
       if (req.url === `/api/v1/ups/${deviceId}/telemetry`) {
         respondJson(res, 503, telemetryStale);
@@ -219,7 +219,7 @@ describe("GET /api/dashboard — estados degradados e falhas", () => {
     expect(body.viewer.sources.telemetry.http_status).toBe(503);
   });
 
-  it("coletor sem leitura (503 + data null) → 200 sem valores fictícios", async () => {
+  it("collector with no reading (503 + data null) → 200 without fictitious values", async () => {
     upstream = await startFakeUpstream((req, res) => {
       if (req.url === `/api/v1/ups/${deviceId}/telemetry`) {
         respondJson(res, 503, telemetryNoData);
@@ -238,7 +238,7 @@ describe("GET /api/dashboard — estados degradados e falhas", () => {
     expect(body.telemetry.communication.state).toBe("starting");
   });
 
-  it("API indisponível (rede recusada) → 502 upstream_unreachable", async () => {
+  it("API unavailable (network refused) → 502 upstream_unreachable", async () => {
     upstream = await startFakeUpstream((_req, res) => respondJson(res, 200, healthOk));
     const baseUrl = upstream.baseUrl;
     await upstream.close();
@@ -254,13 +254,13 @@ describe("GET /api/dashboard — estados degradados e falhas", () => {
     expect(body.telemetry).toBeUndefined();
   });
 
-  it("falha na descoberta registra o erro em viewer.upstream (não fica null)", async () => {
+  it("a discovery failure records the error in viewer.upstream (it does not stay null)", async () => {
     upstream = await startFakeUpstream((_req, res) => respondJson(res, 200, healthOk));
     const baseUrl = upstream.baseUrl;
     await upstream.close();
     upstream = null;
 
-    // Sem UPS_DEVICE_ID: a descoberta por /api/v1/ups é o único caminho.
+    // Without UPS_DEVICE_ID: discovery via /api/v1/ups is the only path.
     viewer = await startViewer({ upstreamBaseUrl: baseUrl });
 
     const { status, body } = await getJson(`${viewer.baseUrl}/api/dashboard`);
@@ -272,7 +272,7 @@ describe("GET /api/dashboard — estados degradados e falhas", () => {
     expect(body.viewer.upstream.error.code).toBe("upstream_unreachable");
   });
 
-  it("API lenta → 502 upstream_timeout", async () => {
+  it("slow API → 502 upstream_timeout", async () => {
     upstream = await startFakeUpstream((_req, res) => {
       setTimeout(() => respondJson(res, 200, healthOk), 400);
     });
@@ -284,7 +284,7 @@ describe("GET /api/dashboard — estados degradados e falhas", () => {
     expect(body.error.code).toBe("upstream_timeout");
   });
 
-  it("resposta que não é JSON → 502 upstream_invalid_json", async () => {
+  it("a response that is not JSON → 502 upstream_invalid_json", async () => {
     upstream = await startFakeUpstream((_req, res) => {
       res.writeHead(200, { "Content-Type": "text/html" });
       res.end("<html>portal</html>");
@@ -297,7 +297,7 @@ describe("GET /api/dashboard — estados degradados e falhas", () => {
     expect(body.error.code).toBe("upstream_invalid_json");
   });
 
-  it("JSON fora do contrato → 502 upstream_contract_mismatch", async () => {
+  it("JSON outside the contract → 502 upstream_contract_mismatch", async () => {
     upstream = await startFakeUpstream((_req, res) => respondJson(res, 200, { status: "ok" }));
     viewer = await startViewer({ upstreamBaseUrl: upstream.baseUrl, deviceId });
 
@@ -308,9 +308,9 @@ describe("GET /api/dashboard — estados degradados e falhas", () => {
     expect(body.viewer.warnings.length).toBeGreaterThan(0);
   });
 
-  it("equipamento inexistente na API → 404 device_not_found", async () => {
+  it("nonexistent device in the API → 404 device_not_found", async () => {
     upstream = await startFakeUpstream((_req, res) => respondJson(res, 404, deviceNotFound));
-    viewer = await startViewer({ upstreamBaseUrl: upstream.baseUrl, deviceId: "inexistente" });
+    viewer = await startViewer({ upstreamBaseUrl: upstream.baseUrl, deviceId: "nonexistent" });
 
     const { status, body } = await getJson(`${viewer.baseUrl}/api/dashboard`);
 
@@ -319,7 +319,7 @@ describe("GET /api/dashboard — estados degradados e falhas", () => {
     expect(body.viewer.sources.telemetry.error.code).toBe("device_not_found");
   });
 
-  it("sem nenhum equipamento disponível → 404 no_devices_configured", async () => {
+  it("with no device available → 404 no_devices_configured", async () => {
     const healthWithoutDevices = { ...healthOk, devices: {} };
     upstream = await startFakeUpstream((req, res) => {
       if (req.url === "/api/v1/ups") {
@@ -341,8 +341,8 @@ describe("GET /api/dashboard — estados degradados e falhas", () => {
   });
 });
 
-describe("ações do teste de bateria (contrato 3.0)", () => {
-  it("POST /api/tests repassa o pedido e devolve 202 com o aceite", async () => {
+describe("battery test actions (contract 3.0)", () => {
+  it("POST /api/tests forwards the request and returns 202 with the acceptance", async () => {
     upstream = await startFakeUpstream((req, res) => {
       if (req.method === "POST" && req.url?.endsWith("/tests")) {
         respondJson(res, 202, testAccept);
@@ -361,13 +361,13 @@ describe("ações do teste de bateria (contrato 3.0)", () => {
 
     expect(status).toBe(202);
     expect(body.accept).toMatchObject({ test_id: testId, status: "running" });
-    // O POST é a ÚNICA escrita enviada à API de origem, e nada é disparado sem o pedido.
+    // The POST is the ONLY write sent to the upstream API, and nothing is triggered without the request.
     const post = upstream.requests.find((request) => request.method === "POST");
     expect(post?.url).toBe(`/api/v1/ups/${deviceId}/tests`);
     expect(upstream.requests.every((request) => request.method === "POST" || request.method === "GET")).toBe(true);
   });
 
-  it("preserva o 409 test_cooldown da API (a interface explica o motivo real)", async () => {
+  it("preserves the API's 409 test_cooldown (the interface explains the real reason)", async () => {
     upstream = await startFakeUpstream((req, res) => {
       if (req.method === "POST" && req.url?.endsWith("/tests")) {
         respondJson(res, 409, testCooldownError);
@@ -383,7 +383,7 @@ describe("ações do teste de bateria (contrato 3.0)", () => {
     expect(body.error.code).toBe("test_cooldown");
   });
 
-  it("GET /api/tests/{id} acompanha o relatório (parcial e completo)", async () => {
+  it("GET /api/tests/{id} follows the report (partial and complete)", async () => {
     upstream = await startFakeUpstream((req, res) => {
       if (req.url === `/api/v1/ups/${deviceId}/tests/${testId}`) {
         respondJson(res, 200, testReportRunning);
@@ -414,7 +414,7 @@ describe("ações do teste de bateria (contrato 3.0)", () => {
     expect(done.body.report.estimate.estimated_runtime_min).toBe(2.2);
   });
 
-  it("POST /api/tests/{id}/abort devolve 202 com o cancelamento", async () => {
+  it("POST /api/tests/{id}/abort returns 202 with the cancellation", async () => {
     upstream = await startFakeUpstream((req, res) => {
       if (req.method === "POST" && req.url?.endsWith("/abort")) {
         respondJson(res, 202, testAbort);
@@ -432,23 +432,23 @@ describe("ações do teste de bateria (contrato 3.0)", () => {
     expect(body.abort).toMatchObject({ test_id: testId, status: "aborting" });
   });
 
-  it("teste inexistente → 404 test_not_found repassado da API", async () => {
+  it("nonexistent test → 404 test_not_found forwarded from the API", async () => {
     upstream = await startFakeUpstream((_req, res) => {
       respondJson(res, 404, {
         api_version: "v1",
         contract_version: "3.0",
-        error: { code: "test_not_found", message: "teste não encontrado" },
+        error: { code: "test_not_found", message: "test not found" },
       });
     });
     viewer = await startViewer({ upstreamBaseUrl: upstream.baseUrl, deviceId });
 
-    const { status, body } = await getJson(`${viewer.baseUrl}/api/tests/inexistente`);
+    const { status, body } = await getJson(`${viewer.baseUrl}/api/tests/nonexistent`);
 
     expect(status).toBe(404);
     expect(body.error.code).toBe("test_not_found");
   });
 
-  it("sem equipamento para resolver a ação → 404 no_devices_configured", async () => {
+  it("no device to resolve the action → 404 no_devices_configured", async () => {
     upstream = await startFakeUpstream((_req, res) => respondJson(res, 200, devicesEmpty));
     viewer = await startViewer({ upstreamBaseUrl: upstream.baseUrl });
 
@@ -459,8 +459,8 @@ describe("ações do teste de bateria (contrato 3.0)", () => {
   });
 });
 
-describe("servidor do viewer", () => {
-  it("GET /healthz responde 200 mesmo com a API indisponível", async () => {
+describe("viewer server", () => {
+  it("GET /healthz responds 200 even with the API unavailable", async () => {
     upstream = await startFakeUpstream((_req, res) => respondJson(res, 200, healthOk));
     const baseUrl = upstream.baseUrl;
     await upstream.close();
@@ -470,10 +470,10 @@ describe("servidor do viewer", () => {
 
     const { status, body } = await getJson(`${viewer.baseUrl}/healthz`);
     expect(status).toBe(200);
-    expect(body).toMatchObject({ status: "ok", read_only: true, service: "ups-web-viewer" });
+    expect(body).toMatchObject({ status: "ok", read_only: true, service: "ups-monitor-viewer" });
   });
 
-  it("GET /api/config publica métricas, faixas provisórias e intervalo de atualização", async () => {
+  it("GET /api/config publishes metrics, provisional bands and the refresh interval", async () => {
     upstream = await startFakeUpstream((_req, res) => respondJson(res, 200, healthOk));
     viewer = await startViewer({ upstreamBaseUrl: upstream.baseUrl, refreshIntervalMs: 5000 });
 
@@ -485,7 +485,7 @@ describe("servidor do viewer", () => {
     expect(body.threshold_problems).toEqual([]);
   });
 
-  it("recusa métodos de escrita com 405", async () => {
+  it("rejects write methods with 405", async () => {
     upstream = await startFakeUpstream((_req, res) => respondJson(res, 200, healthOk));
     viewer = await startViewer({ upstreamBaseUrl: upstream.baseUrl });
 
@@ -497,11 +497,11 @@ describe("servidor do viewer", () => {
     expect(upstream.requests).toHaveLength(0);
   });
 
-  it("só admite escrita (POST) nas rotas do teste de bateria", async () => {
+  it("only accepts writes (POST) on the battery test routes", async () => {
     upstream = await startFakeUpstream((_req, res) => respondJson(res, 200, healthOk));
     viewer = await startViewer({ upstreamBaseUrl: upstream.baseUrl, deviceId });
 
-    // A escrita fora das rotas do teste continua bloqueada localmente.
+    // Writes outside the test routes remain blocked locally.
     for (const method of ["PUT", "PATCH", "DELETE"]) {
       const { status, body } = await getJson(`${viewer.baseUrl}/api/tests`, { method });
       expect(status).toBe(405);
@@ -509,11 +509,11 @@ describe("servidor do viewer", () => {
     }
     const report = await getJson(`${viewer.baseUrl}/api/tests/abc`, { method: "POST" });
     expect(report.status).toBe(405);
-    // Nenhum método recusado chega à API de origem.
+    // No rejected method reaches the upstream API.
     expect(upstream.requests).toHaveLength(0);
   });
 
-  it("responde 404 para recurso inexistente em /api", async () => {
+  it("responds 404 for a nonexistent resource in /api", async () => {
     upstream = await startFakeUpstream((_req, res) => respondJson(res, 200, healthOk));
     viewer = await startViewer({ upstreamBaseUrl: upstream.baseUrl });
 
@@ -522,7 +522,7 @@ describe("servidor do viewer", () => {
     expect(body.error.code).toBe("not_found");
   });
 
-  it("deduplica consultas dentro do TTL do cache", async () => {
+  it("deduplicates queries within the cache TTL", async () => {
     upstream = await startFakeUpstream((req, res) => {
       const route = okRoutes()[req.url as keyof ReturnType<typeof okRoutes>];
       respondJson(res, route ? route.status : 404, route ? route.payload : deviceNotFound);

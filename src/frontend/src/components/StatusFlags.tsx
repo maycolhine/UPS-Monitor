@@ -1,23 +1,24 @@
 /**
- * Área de estado operacional (flags do quadro de status).
+ * Operational state area (status frame flags).
  *
- * A lista completa fica sempre visível (sem `<details>`): os estados ATIVOS
- * aparecem em destaque e os INATIVOS também ficam à mostra, porém apagados —
- * assim a tela não deixa espaço vazio nem esconde informação. Nenhuma condição
- * é inferida (por exemplo, ausência de `OB` NÃO é exibida como "rede elétrica
- * normal"), conforme escopo §5.1.
+ * The full list is always visible (no `<details>`): ACTIVE states are
+ * highlighted and INACTIVE ones are also shown, but dimmed — so the screen
+ * leaves no empty space nor hides information. No condition is inferred (for
+ * example, the absence of `OB` is NOT displayed as "normal mains power"), per
+ * scope §5.1.
  *
- * A ORDEM dos cards é fixa (a da tabela do protocolo, do mais tranquilo ao mais
- * crítico) e NÃO muda conforme ativo/inativo: se os ativos subissem ao topo a
- * cada leitura, o card "dançaria" na tela e o usuário não conseguiria acompanhar
- * a mudança. A cor da barra lateral vem de `flagTone`, não da severidade.
+ * The ORDER of the cards is fixed (the one of the protocol table, from the
+ * calmest to the most critical) and does NOT change with active/inactive: if
+ * the active ones rose to the top on every reading, the card would "dance" on
+ * the screen and the user would not be able to follow the change. The color of
+ * the side bar comes from `flagTone`, not from the severity.
  */
 import type { FlagView } from "../model/status.js";
 import { flagTone } from "../model/status.js";
 import { formatText } from "../model/format.js";
 
 export interface StatusFlagsProps {
-  /** true quando a telemetria trouxe o bloco de status utilizável. */
+  /** true when the telemetry brought a usable status block. */
   available: boolean;
   stale: boolean;
   flags: FlagView[];
@@ -30,20 +31,20 @@ export function StatusFlags({ available, stale, flags, unknownFlags, rawBits }: 
   const hasActive = all.some((flag) => flag.active);
 
   return (
-    <section className="panel" aria-labelledby="estado-operacional">
-      <h2 id="estado-operacional" className="panel__title">
-        Estado operacional
+    <section className="panel" aria-labelledby="operating-status">
+      <h2 id="operating-status" className="panel__title">
+        Operational state
       </h2>
 
       {!available ? (
         <p className="panel__empty">
-          Sem dados de estado: a API não publicou o quadro de status nesta leitura.
+          No state data: the API did not publish the status frame in this reading.
         </p>
       ) : (
         <>
           {!hasActive ? (
             <p className="panel__empty">
-              Nenhum estado ativo informado pelo equipamento nesta leitura.
+              No active state reported by the device in this reading.
             </p>
           ) : null}
 
@@ -55,7 +56,7 @@ export function StatusFlags({ available, stale, flags, unknownFlags, rawBits }: 
               >
                 <span className="flag__id">{flag.id}</span>
                 <span className="flag__label">{flag.label}</span>
-                <span className="flag__hint">{flag.active ? "ativo" : "inativo"}</span>
+                <span className="flag__hint">{flag.active ? "active" : "inactive"}</span>
                 <span className="flag__description">{flag.description}</span>
               </li>
             ))}
@@ -67,8 +68,8 @@ export function StatusFlags({ available, stale, flags, unknownFlags, rawBits }: 
 
       {stale ? (
         <p className="panel__warning">
-          Os estados acima são de uma leitura desatualizada. Não representam necessariamente a
-          condição atual do equipamento.
+          The states above come from a stale reading. They do not necessarily represent the
+          current condition of the device.
         </p>
       ) : null}
     </section>

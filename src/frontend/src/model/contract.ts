@@ -1,15 +1,15 @@
 /**
- * Tipos do payload publicado pelo backend do Web Viewer (`GET /api/dashboard`,
+ * Types of the payload published by the Web Viewer backend (`GET /api/dashboard`,
  * `GET /api/config`, `GET /api/devices`).
  *
- * O bloco `telemetry` reproduz literalmente o contrato da API de telemetria
- * (v1/3.0, multidispositivo e multiprotocolo): os nomes de campo abaixo são os
- * da API, não apelidos da interface.
+ * The `telemetry` block reproduces literally the telemetry API contract
+ * (v1/3.0, multi-device and multiprotocol): the field names below are the API
+ * ones, not aliases of the interface.
  *
- * O contrato 3.0 acrescenta o teste de bateria: `capabilities.battery_test` na
- * descoberta (`GET /api/v1/ups`) e o relatório de previsibilidade
- * (`GET .../tests/{test_id}`). A leitura continua idêntica; a única escrita é o
- * pedido de teste, repassado pelo backend do viewer.
+ * Contract 3.0 adds the battery test: `capabilities.battery_test` in the
+ * discovery (`GET /api/v1/ups`) and the predictability report
+ * (`GET .../tests/{test_id}`). The read remains identical; the only write is the
+ * test request, forwarded by the viewer backend.
  */
 
 export interface ViewerSourceStatus {
@@ -43,7 +43,7 @@ export interface ViewerSection {
     devices: ViewerSourceStatus;
     telemetry: ViewerSourceStatus;
     identity: ViewerSourceStatus;
-    /** Histórico do teste de bateria (`GET .../tests?limit=N`, contrato 3.0). */
+    /** Battery test history (`GET .../tests?limit=N`, contract 3.0). */
     tests: ViewerSourceStatus;
   };
 }
@@ -70,7 +70,7 @@ export interface CommunicationState {
   stale_after_s?: number;
 }
 
-/** Bloco de bateria do `megatec-q1` (percentual ESTIMADO por interpolação). */
+/** Battery block of `megatec-q1` (percent ESTIMATED by interpolation). */
 export interface BatteryCharge {
   percent: number | null;
   estimated?: boolean;
@@ -79,8 +79,8 @@ export interface BatteryCharge {
 }
 
 /**
- * Bloco de bateria do `sms-1phase`: percentual **informado pelo equipamento** e
- * tensão **derivada** pela API (`voltage_derived`). Não é estimativa.
+ * Battery block of `sms-1phase`: percent **reported by the device** and voltage
+ * **derived** by the API (`voltage_derived`). It is not an estimate.
  */
 export interface BatteryReported {
   charge_percent: number | null;
@@ -93,7 +93,7 @@ export interface BatteryReported {
 
 export interface StatusBlock {
   raw_bits?: string;
-  /** O `sms-1phase` publica também o byte de estado em decimal. */
+  /** `sms-1phase` also publishes the state byte in decimal. */
   raw_byte?: number;
   active?: string[];
   flags?: Record<string, boolean>;
@@ -101,7 +101,7 @@ export interface StatusBlock {
 
 export interface TelemetryData {
   captured_at_utc?: string | null;
-  /** Protocolo que originou o quadro (`megatec-q1`, `sms-1phase`, ...). */
+  /** Protocol that produced the frame (`megatec-q1`, `sms-1phase`, ...). */
   source?: string;
   measurements: Record<string, number | null>;
   battery_charge?: BatteryCharge;
@@ -160,16 +160,16 @@ export interface DevicesPayload {
     protocol?: string | null;
     serial_port?: string | null;
     communication_state?: string | null;
-    /** O `sms-1phase` e o `megatec-q1` publicam se há leitura fresca agora. */
+    /** `sms-1phase` and `megatec-q1` publish whether there is a fresh reading now. */
     telemetry_valid?: boolean;
     telemetry_endpoint?: string | null;
     identity_endpoint?: string | null;
-    /** Contrato 3.0: descreve o teste de bateria disponível neste equipamento. */
+    /** Contract 3.0: describes the battery test available on this device. */
     capabilities?: DeviceCapabilities;
   }>;
 }
 
-/** Disponibilidade de UM equipamento dentro de `GET /health` (contrato 2.0). */
+/** Availability of ONE device inside `GET /health` (contract 2.0). */
 export interface HealthDeviceStatus {
   telemetry_valid?: boolean;
   stale?: boolean;
@@ -184,8 +184,8 @@ export interface HealthDeviceStatus {
 }
 
 /**
- * `GET /health` do contrato 2.0 é **agregado** por `device_id` em `devices`
- * (os campos `device_id`, `checks` e `collector` do contrato 1.0 não existem mais).
+ * `GET /health` of contract 2.0 is **aggregated** by `device_id` in `devices`
+ * (the `device_id`, `checks` and `collector` fields of contract 1.0 no longer exist).
  */
 export interface HealthPayload {
   api_version: string;
@@ -201,8 +201,9 @@ export interface HealthPayload {
 export interface DashboardPayload {
   viewer: ViewerSection;
   /**
-   * Presente quando o backend respondeu com envelope de erro (ex.: 502/404).
-   * Descreve a condição da API de origem — não é falha do serviço do Web Viewer.
+   * Present when the backend responded with an error envelope (e.g., 502/404).
+   * Describes the condition of the origin API — it is not a failure of the Web
+   * Viewer service.
    */
   error?: { code: string; message: string } | null;
   health: HealthPayload | null;
@@ -210,19 +211,19 @@ export interface DashboardPayload {
   telemetry: TelemetryPayload | null;
   identity: IdentityPayload | null;
   /**
-   * Histórico recente do teste de bateria (`GET .../tests?limit=N`, contrato
-   * 3.0) — sem a série de amostras. É um extra do painel: pode vir `null`
-   * quando a API não expõe o histórico.
+   * Recent battery test history (`GET .../tests?limit=N`, contract 3.0) —
+   * without the samples series. It is an extra of the panel: it may come as
+   * `null` when the API does not expose the history.
    */
   tests: TestsListPayload | null;
 }
 
-// ------------------------ teste de bateria (contrato 3.0) -------------------
+// ------------------------ battery test (contract 3.0) -------------------
 
 /**
- * Parâmetros de UM tipo de teste, publicados em
- * `capabilities.battery_test.types.<type>`: é o que distingue o teste de janela
- * (`duration_s`) do teste por alvo (`target_percent` + `timeout_s`).
+ * Parameters of ONE test type, published in
+ * `capabilities.battery_test.types.<type>`: it is what distinguishes the window
+ * test (`duration_s`) from the target test (`target_percent` + `timeout_s`).
  */
 export interface BatteryTestTypeParams {
   duration_s?: number | null;
@@ -232,17 +233,17 @@ export interface BatteryTestTypeParams {
 }
 
 /**
- * Contrato de descoberta do teste. `enabled` decide se o botão pode ser
- * acionado; `abort_supported` se existe cancelamento; os demais campos são os
- * parâmetros efetivos do dispositivo (janela, cadência de amostragem, cooldown
- * e carga mínima).
+ * Test discovery contract. `enabled` decides whether the button can be
+ * triggered; `abort_supported` whether cancellation exists; the remaining fields
+ * are the effective device parameters (window, sampling cadence, cooldown and
+ * minimum charge).
  */
 export interface BatteryTestCapabilities {
   supported?: boolean;
   enabled?: boolean;
-  /** Tipos aceitos por ESTE equipamento — nenhum tipo fora desta lista é oferecido. */
+  /** Types accepted by THIS device — no type outside this list is offered. */
   test_types?: string[];
-  /** Detalhe por tipo (janela × alvo). */
+  /** Detail per type (window × target). */
   types?: Record<string, BatteryTestTypeParams>;
   duration_s?: number | null;
   sample_interval_s?: number | null;
@@ -255,7 +256,7 @@ export interface DeviceCapabilities {
   battery_test?: BatteryTestCapabilities;
 }
 
-/** Aceite do pedido de teste (`POST .../tests` → 202; execução assíncrona). */
+/** Acceptance of the test request (`POST .../tests` → 202; asynchronous execution). */
 export interface BatteryTestAccept {
   accepted_at_utc?: string | null;
   poll_interval_s?: number | null;
@@ -266,22 +267,22 @@ export interface BatteryTestAccept {
   started_at_utc?: string | null;
   expected_end_at_utc?: string | null;
   requested_duration_s?: number | null;
-  /** Alvo de carga do teste de descarga; `null` no teste de janela. */
+  /** Charge target of the discharge test; `null` in the window test. */
   target_percent?: number | null;
-  /** Teto de segurança do teste. */
+  /** Safety ceiling of the test. */
   timeout_s?: number | null;
   sample_interval_s?: number | null;
   report_url?: string | null;
 }
 
-/** Resposta do cancelamento (`POST .../tests/{id}/abort` → 202). */
+/** Cancellation response (`POST .../tests/{id}/abort` → 202). */
 export interface BatteryTestAbort {
   test_id: string;
   device_id: string;
   status: string;
 }
 
-/** Agregação por métrica dentro do relatório (`deltas.metrics`). */
+/** Aggregation per metric inside the report (`deltas.metrics`). */
 export interface BatteryTestMetricDelta {
   start?: number | null;
   end?: number | null;
@@ -294,9 +295,9 @@ export interface BatteryTestMetricDelta {
 }
 
 /**
- * Estimativa de autonomia: extrapolação linear de 1ª ordem, sempre
- * `confidence: "low"`. Quando `available` é `false`, o campo `reason` explica —
- * a interface NUNCA converte isso em número.
+ * Runtime estimate: first-order linear extrapolation, always
+ * `confidence: "low"`. When `available` is `false`, the `reason` field explains —
+ * the interface NEVER converts this into a number.
  */
 export interface BatteryTestEstimate {
   available: boolean;
@@ -312,9 +313,9 @@ export interface BatteryTestEstimate {
 }
 
 /**
- * Uma amostra da linha do tempo. `normalized` é o espelho padronizado das
- * métricas entre protocolos e é a base dos gráficos; `measurements` mantém os
- * nomes crus de cada modelo.
+ * One sample of the timeline. `normalized` is the standardized mirror of the
+ * metrics across protocols and is the basis of the charts; `measurements` keeps
+ * the raw names of each model.
  */
 export interface BatteryTestSample {
   offset_s?: number | null;
@@ -324,7 +325,7 @@ export interface BatteryTestSample {
   battery?: { charge_percent?: number | null; voltage_v?: number | null };
 }
 
-/** Relatório completo de um teste (parcial enquanto `status = "running"`). */
+/** Full report of a test (partial while `status = "running"`). */
 export interface BatteryTestReport {
   test_id: string;
   device_id?: string;
@@ -336,12 +337,12 @@ export interface BatteryTestReport {
   requested_duration_s?: number | null;
   duration_s?: number | null;
   sample_interval_s?: number | null;
-  /** Alvo de carga do teste de descarga; `null` no teste de janela. */
+  /** Charge target of the discharge test; `null` in the window test. */
   target_percent?: number | null;
-  /** Teto de segurança do teste. */
+  /** Safety ceiling of the test. */
   timeout_s?: number | null;
   finish_reason?: string | null;
-  /** `true` se o nobreak ligou a flag `TEST` (confirma que o teste ocorreu). */
+  /** `true` if the UPS raised the `TEST` flag (confirms the test occurred). */
   test_flag_observed?: boolean;
   flags_seen?: string[];
   baseline?: Record<string, number | null>;
@@ -357,7 +358,7 @@ export interface BatteryTestReport {
   samples?: BatteryTestSample[];
 }
 
-/** Item do histórico (`GET .../tests`): relatório sem a série de amostras. */
+/** History item (`GET .../tests`): report without the samples series. */
 export interface BatteryTestListItem {
   test_id: string;
   type?: string;
@@ -381,7 +382,7 @@ export interface TestsListPayload {
   tests: BatteryTestListItem[];
 }
 
-/** Respostas das ações do teste publicadas pelo backend do viewer. */
+/** Responses of the test actions published by the viewer backend. */
 export interface BatteryTestAcceptPayload {
   viewer: ViewerSection;
   accept: BatteryTestAccept;
@@ -409,7 +410,7 @@ export interface GaugeBand {
   label: string;
 }
 
-/** Medição complementar exibida junto do gauge (ex.: tensão da bateria). */
+/** Complementary measurement displayed next to the gauge (e.g., battery voltage). */
 export interface GaugeSecondarySource {
   label: string;
   path: string;
@@ -418,15 +419,15 @@ export interface GaugeSecondarySource {
 }
 
 /**
- * Origem de um valor no payload de telemetria — **um caminho por protocolo**.
- * A lista de `sources` é a ordem de preferência: o primeiro caminho presente vence.
+ * Source of a value in the telemetry payload — **one path per protocol**.
+ * The `sources` list is the order of preference: the first path present wins.
  */
 export interface GaugeSource {
-  /** Caminho exato no payload de telemetria (nomes do contrato, sem renomear). */
+  /** Exact path in the telemetry payload (contract names, without renaming). */
   path: string;
-  /** Rótulo exibido quando este caminho é usado (padrão: rótulo do gauge). */
+  /** Label displayed when this path is used (default: the gauge label). */
   label?: string;
-  /** Selo de origem ("estimativa", "informada pelo equipamento", ...). */
+  /** Origin badge ("estimate", "reported by the device", ...). */
   origin_note?: string;
   secondary?: GaugeSecondarySource;
 }
@@ -435,7 +436,7 @@ export interface GaugeDefinition {
   id: string;
   label: string;
   unit: string;
-  /** Caminhos no payload de telemetria, em ordem de preferência. */
+  /** Paths in the telemetry payload, in order of preference. */
   sources: GaugeSource[];
   scale: { min: number; max: number; ticks: number[] };
   bands: GaugeBand[];

@@ -1,9 +1,9 @@
 /**
- * Configuração do Web Viewer (backend/proxy).
+ * Web Viewer (backend/proxy) configuration.
  *
- * Toda a configuração vem de variáveis de ambiente — nada de IP fixo no código.
- * Valores incoerentes encerram o processo com código 2 (mesmo comportamento do
- * serviço de aquisição), para que um erro de digitação não passe em silêncio.
+ * All configuration comes from environment variables — no hardcoded IP in the code.
+ * Inconsistent values terminate the process with exit code 2 (same behavior as the
+ * acquisition service), so that a typo does not go unnoticed.
  */
 import type { LogLevel } from "./logger.js";
 
@@ -46,10 +46,10 @@ function readNumber(
   if (raw === undefined || raw.trim() === "") return fallback;
   const value = Number(raw);
   if (!Number.isFinite(value) || Number.isNaN(value)) {
-    throw new ConfigError(`${key} deve ser numérico (recebido: '${raw}')`);
+    throw new ConfigError(`${key} must be numeric (received: '${raw}')`);
   }
   if (value < min || value > max) {
-    throw new ConfigError(`${key} deve estar entre ${min} e ${max} (recebido: ${value})`);
+    throw new ConfigError(`${key} must be between ${min} and ${max} (received: ${value})`);
   }
   return value;
 }
@@ -59,18 +59,18 @@ function readBaseUrl(env: NodeJS.ProcessEnv, key: string, fallback: string): str
   try {
     const url = new URL(raw);
     if (url.protocol !== "http:" && url.protocol !== "https:") {
-      throw new Error("protocolo deve ser http ou https");
+      throw new Error("protocol must be http or https");
     }
     return raw.replace(/\/+$/, "");
   } catch (error) {
-    throw new ConfigError(`${key} inválido ('${raw}'): ${(error as Error).message}`);
+    throw new ConfigError(`${key} invalid ('${raw}'): ${(error as Error).message}`);
   }
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ViewerConfig {
   const logLevelRaw = readString(env, "VIEWER_LOG_LEVEL", "info").toLowerCase();
   if (!LOG_LEVELS.includes(logLevelRaw as LogLevel)) {
-    throw new ConfigError(`VIEWER_LOG_LEVEL deve ser um de ${LOG_LEVELS.join(", ")} (recebido: '${logLevelRaw}')`);
+    throw new ConfigError(`VIEWER_LOG_LEVEL must be one of ${LOG_LEVELS.join(", ")} (received: '${logLevelRaw}')`);
   }
 
   const staticDirRaw = readString(env, "VIEWER_STATIC_DIR", "");
@@ -78,11 +78,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ViewerConfig {
 
   return {
     httpHost: readString(env, "VIEWER_HTTP_HOST", "0.0.0.0"),
-    // 8080 é o padrão DENTRO do container; no host publique outra porta (VIEWER_HTTP_PORT).
+    // 8080 is the default INSIDE the container; on the host publish another port (VIEWER_HTTP_PORT).
     httpPort: readNumber(env, "VIEWER_HTTP_PORT", 8080, { min: 1, max: 65535 }),
     staticDir: staticDirRaw === "" ? null : staticDirRaw,
-    // Padrão para uso local (API na própria máquina). Dentro do container use
-    // host.docker.internal ou o IP de rede do host — `localhost` é o container.
+    // Default for local use (API on the same machine). Inside the container use
+    // host.docker.internal or the host network IP — `localhost` is the container.
     apiBaseUrl: readBaseUrl(env, "UPS_API_BASE_URL", "http://127.0.0.1:8080"),
     apiTimeoutMs: readNumber(env, "UPS_API_TIMEOUT_MS", 4000, { min: 200, max: 120000 }),
     apiCacheTtlMs: readNumber(env, "UPS_API_CACHE_TTL_MS", 1500, { min: 0, max: 60000 }),

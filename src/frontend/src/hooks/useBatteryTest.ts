@@ -1,15 +1,16 @@
 /**
- * Acompanhamento do teste de bateria (contrato 3.0).
+ * Battery test tracking (contract 3.0).
  *
- * O `POST` é ASSÍNCRONO: o aceite (`202`) traz o `test_id` e o intervalo de
- * consulta, e a execução só começa no próximo ciclo do coletor (até 5 s). Por
- * isso o hook nunca trata a resposta do `POST` como resultado — ele acompanha o
- * relatório em `report_url` até um estado terminal.
+ * The `POST` is ASYNCHRONOUS: the acceptance (`202`) brings the `test_id` and
+ * the polling interval, and the execution only starts on the next collector
+ * cycle (up to 5 s). That is why the hook never treats the `POST` response as a
+ * result — it follows the report at `report_url` until a terminal state.
  *
- * O tipo do teste (`duration_10s` ou `discharge_20pct`) é decidido pelo usuário
- * e restrito a `capabilities.battery_test.test_types`; o hook apenas o repassa.
- * Nada é disparado automaticamente: o teste só começa quando o usuário aciona o
- * botão. O polling apenas OBSERVA um teste já pedido.
+ * The test type (`duration_10s` or `discharge_20pct`) is decided by the user
+ * and restricted to `capabilities.battery_test.test_types`; the hook only
+ * forwards it. Nothing is triggered automatically: the test only starts when
+ * the user presses the button. The polling only OBSERVES an already requested
+ * test.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -22,21 +23,21 @@ import { testPhase, type TestPhase } from "../model/batteryTest.js";
 import type { BatteryTestAccept, BatteryTestReport } from "../model/contract.js";
 
 const DEFAULT_POLL_MS = 500;
-/** Ritmo mínimo de consulta: evita martelar a API com o relatório de 25 amostras. */
+/** Minimum polling rate: avoids hammering the API with the 25-sample report. */
 const MIN_POLL_MS = 400;
 
 export type BatteryTestPhase = "idle" | TestPhase;
 
 export interface BatteryTestState {
   phase: BatteryTestPhase;
-  /** Requisição de disparo/cancelamento em curso. */
+  /** Start/cancel request in progress. */
   busy: boolean;
   testId: string | null;
   accept: BatteryTestAccept | null;
   report: BatteryTestReport | null;
   error: { code: string; message: string } | null;
   canAbort: boolean;
-  /** `type` é o tipo publicado em `capabilities.battery_test.test_types`. */
+  /** `type` is the type published in `capabilities.battery_test.test_types`. */
   start: (type?: string) => void;
   abort: () => void;
 }
@@ -57,7 +58,7 @@ export function useBatteryTest(
   const [busy, setBusy] = useState(false);
 
   const pollRef = useRef<PollRef>({ timer: null, controller: null });
-  /** Teste que está sendo acompanhado agora (evita adoção duplicada). */
+  /** Test currently being tracked (avoids duplicate adoption). */
   const trackedRef = useRef<string | null>(null);
 
   const stopPolling = useCallback(() => {
@@ -85,13 +86,13 @@ export function useBatteryTest(
           setReport(next);
           setError(null);
           if (next.status !== "running") {
-            // Estado terminal: o relatório está completo (ou cancelado/falhou).
+            // Terminal state: the report is complete (or cancelled/failed).
             trackedRef.current = null;
             stopPolling();
             return;
           }
         } else if (result.error) {
-          // Falha transitória de leitura não encerra o acompanhamento.
+          // A transient read failure does not end the tracking.
           setError(result.error);
         }
 
@@ -103,7 +104,7 @@ export function useBatteryTest(
     [deviceId, stopPolling],
   );
 
-  // O teste é por equipamento: trocar de nobreak descarta o acompanhamento.
+  // The test is per device: switching UPS discards the tracking.
   useEffect(() => {
     stopPolling();
     trackedRef.current = null;
@@ -113,8 +114,9 @@ export function useBatteryTest(
     setError(null);
   }, [deviceId, stopPolling]);
 
-  // Um teste já em andamento (iniciado antes de recarregar a página) é adotado
-  // pela lista publicada em `GET .../tests`, sem disparar nada.
+  // A test already in progress (started before the page was reloaded) is
+  // adopted from the list published by `GET .../tests`, without triggering
+  // anything.
   useEffect(() => {
     if (trackedRef.current !== null || !runningTestId) return;
     trackedRef.current = runningTestId;
@@ -133,7 +135,7 @@ export function useBatteryTest(
     void startBatteryTest(deviceId, type).then((result) => {
       setBusy(false);
       if (!result.ok || !result.data) {
-        setError(result.error ?? { code: "unknown", message: "O pedido de teste não foi aceito." });
+        setError(result.error ?? { code: "unknown", message: "The test request was not accepted." });
         return;
       }
       const accepted = result.data.accept;
@@ -156,10 +158,10 @@ export function useBatteryTest(
     void abortBatteryTest(id, deviceId).then((result) => {
       setBusy(false);
       if (!result.ok || !result.data) {
-        setError(result.error ?? { code: "unknown", message: "O cancelamento não foi aceito." });
+        setError(result.error ?? { code: "unknown", message: "The cancellation was not accepted." });
         return;
       }
-      // O relatório passa a "aborted" preservando as amostras já coletadas.
+      // The report becomes "aborted", preserving the samples already collected.
       poll(id, DEFAULT_POLL_MS);
     });
   }, [deviceId, poll, testId]);

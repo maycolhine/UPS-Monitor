@@ -4,13 +4,13 @@ import { buildNotices } from "../src/components/Notices.js";
 import { formatAge, formatNumber, formatPercent, formatText } from "../src/model/format.js";
 import type { DashboardPayload } from "../src/model/contract.js";
 
-describe("formatação pt-BR sem inventar valores", () => {
-  it("usa vírgula como separador decimal", () => {
-    expect(formatNumber(27.4, 1)).toBe("27,4");
-    expect(formatNumber(1500, 0)).toBe("1.500");
+describe("en-US formatting without inventing values", () => {
+  it("uses a period as the decimal separator", () => {
+    expect(formatNumber(27.4, 1)).toBe("27.4");
+    expect(formatNumber(1500, 0)).toBe("1,500");
   });
 
-  it("mostra traço para ausente (nunca 0)", () => {
+  it("shows a dash for a missing value (never 0)", () => {
     expect(formatNumber(null)).toBe("—");
     expect(formatNumber(undefined)).toBe("—");
     expect(formatNumber(Number.NaN)).toBe("—");
@@ -19,8 +19,8 @@ describe("formatação pt-BR sem inventar valores", () => {
     expect(formatText(null)).toBe("—");
   });
 
-  it("formata idade em segundos, minutos e horas", () => {
-    expect(formatAge(3.2)).toBe("3,2 s");
+  it("formats age in seconds, minutes, and hours", () => {
+    expect(formatAge(3.2)).toBe("3.2 s");
     expect(formatAge(64)).toBe("1 min 4 s");
     expect(formatAge(120)).toBe("2 min");
     expect(formatAge(7500)).toBe("2 h 5 min");
@@ -59,17 +59,17 @@ function dashboardWith(telemetry: DashboardPayload["telemetry"], error: { code: 
 }
 
 describe("buildNotices", () => {
-  it("avisa que os dados são simulados em modo demonstração", () => {
+  it("warns that the data is simulated in demo mode", () => {
     const notices = buildNotices({ demo: true, fetchError: null, dashboard: null, thresholdProblems: [] });
     expect(notices.map((notice) => notice.id)).toContain("demo");
-    expect(notices[0]?.title).toContain("DEMONSTRAÇÃO");
+    expect(notices[0]?.title).toContain("DEMO");
   });
 
-  it("reporta a API de telemetria como indisponível com o código do erro", () => {
+  it("reports the telemetry API as unavailable with the error code", () => {
     const notices = buildNotices({
       demo: false,
       fetchError: null,
-      dashboard: dashboardWith(null, { code: "upstream_unreachable", message: "sem rota até o host" }),
+      dashboard: dashboardWith(null, { code: "upstream_unreachable", message: "no route to the host" }),
       thresholdProblems: [],
     });
     const notice = notices.find((item) => item.id === "upstream_unreachable");
@@ -77,16 +77,16 @@ describe("buildNotices", () => {
     expect(notice?.message).toContain("upstream_unreachable");
   });
 
-  it("distingue 'sem telemetria' de 'telemetria desatualizada'", () => {
-    const semTelemetria = buildNotices({
+  it("distinguishes 'no telemetry' from 'stale telemetry'", () => {
+    const noTelemetry = buildNotices({
       demo: false,
       fetchError: null,
       dashboard: dashboardWith(null, null),
       thresholdProblems: [],
     });
-    expect(semTelemetria.map((notice) => notice.id)).toEqual(["no_telemetry"]);
+    expect(noTelemetry.map((notice) => notice.id)).toEqual(["no_telemetry"]);
 
-    const desatualizada = buildNotices({
+    const stale = buildNotices({
       demo: false,
       fetchError: null,
       dashboard: dashboardWith(
@@ -104,13 +104,13 @@ describe("buildNotices", () => {
       ),
       thresholdProblems: [],
     });
-    expect(desatualizada.map((notice) => notice.id)).toEqual(["stale"]);
-    expect(desatualizada[0]?.title).toBe("Leitura desatualizada");
+    expect(stale.map((notice) => notice.id)).toEqual(["stale"]);
+    expect(stale[0]?.title).toBe("Stale reading");
   });
 
-  it("trata erro da API de origem vindo no envelope, sem culpar o Web Viewer", () => {
+  it("handles an origin API error coming in the envelope, without blaming the Web Viewer", () => {
     const deviceMissing = dashboardWith(null, null);
-    deviceMissing.error = { code: "device_not_found", message: "equipamento 'x' nao esta configurado" };
+    deviceMissing.error = { code: "device_not_found", message: "device 'x' is not configured" };
 
     const notices = buildNotices({
       demo: false,
@@ -120,37 +120,37 @@ describe("buildNotices", () => {
     });
 
     expect(notices.map((notice) => notice.id)).toEqual(["device_not_found"]);
-    expect(notices[0]?.title).toBe("Equipamento não encontrado na API");
+    expect(notices[0]?.title).toBe("Device not found in the API");
     expect(notices[0]?.message).toContain("device_not_found");
   });
 
-  it("distingue falha do serviço do Web Viewer de indisponibilidade da API", () => {
+  it("distinguishes a Web Viewer service failure from API unavailability", () => {
     const viewerDown = buildNotices({
       demo: false,
       fetchError: {
         code: "network_error",
-        message: "Não foi possível falar com o serviço do Web Viewer (mesma origem).",
+        message: "Could not reach the Web Viewer service (same origin).",
       },
       dashboard: null,
       thresholdProblems: [],
     });
 
     expect(viewerDown.map((notice) => notice.id)).toEqual(["viewer_fetch"]);
-    expect(viewerDown[0]?.title).toBe("Serviço do Web Viewer inacessível");
+    expect(viewerDown[0]?.title).toBe("Web Viewer service unreachable");
   });
 
-  it("avisa sobre faixas provisórias não validadas", () => {
+  it("warns about provisional bands that have not been validated", () => {
     const notices = buildNotices({
       demo: false,
       fetchError: null,
       dashboard: null,
-      thresholdProblems: ["Faixas provisórias."],
+      thresholdProblems: ["Provisional bands."],
     });
     const notice = notices.find((item) => item.id === "thresholds");
     expect(notice?.level).toBe("info");
   });
 
-  it("não gera avisos quando está tudo normal", () => {
+  it("does not generate notices when everything is normal", () => {
     const notices = buildNotices({
       demo: false,
       fetchError: null,

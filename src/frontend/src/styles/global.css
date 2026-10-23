@@ -1,31 +1,31 @@
 /* ==========================================================================
    UPS Monitor — Web Viewer
-   Painel em quatro quadrantes, no estilo videowall (inspirado na Torre de
-   Controle nstech): fundo escuro de alto contraste, tipografia Barlow, números
-   tabulares e medidores semicirculares com faixas semânticas.
+   Four-quadrant dashboard in videowall style (inspired by a control-room
+   tower): dark high-contrast background, Barlow typography, tabular numbers
+   and semicircular gauges with semantic bands.
 
-   Regras de UX preservadas (escopo §4.2/§6 e regra 30-ui-ux):
-   - a cor nunca é o único sinal de estado: todo medidor e aviso combina
-     cor + valor + rótulo textual;
-   - valor ausente nunca vira zero: aparece "Sem dados"/"Desatualizado";
-   - foco visível, contraste adequado, rótulos em dt/dd e caption/th nas tabelas;
-   - grades fluidas, sem rolagem horizontal.
+   Preserved UX rules (scope §4.2/§6 and rule 30-ui-ux):
+   - color is never the only state signal: every gauge and notice combines
+     color + value + textual label;
+   - a missing value never becomes zero: it shows "No data"/"Stale";
+   - visible focus, adequate contrast, dt/dd labels and caption/th in tables;
+   - fluid grids, with no horizontal scrolling.
    ========================================================================== */
 
 :root {
-  /* Paleta institucional */
+  /* Institutional palette */
   --brand: #ff3d03;
   --brand-soft: rgba(255, 61, 3, 0.14);
   --ink-strong: #ffffff;
   --ink-secondary: #9ea8b8;
   --line: #1d2335;
 
-  /* Superfícies */
+  /* Surfaces */
   --surface: #030408;
   --panel: #070913;
   --card: #0c101f;
 
-  /* Semântica operacional (medidores, avisos e flags) */
+  /* Operational semantics (gauges, notices and flags) */
   --sem-critical: #ef4444;
   --sem-critical-soft: rgba(239, 68, 68, 0.14);
   --sem-warning: #f59e0b;
@@ -34,7 +34,7 @@
   --sem-good-soft: rgba(16, 185, 129, 0.13);
   --sem-unknown: #9ea8b8;
   --sem-unknown-soft: rgba(158, 168, 184, 0.12);
-  /* Rede ausente (na bateria) e teste em andamento: tons próprios da bolinha. */
+  /* Mains absent (on battery) and test in progress: dedicated tones of the dot. */
   --sem-alert: #fb923c;
   --sem-alert-soft: rgba(251, 146, 60, 0.14);
   --sem-active: #3b82f6;
@@ -124,7 +124,7 @@ button {
   left: 0;
 }
 
-/* ------------------------------------------------- Palco de 4 quadrantes --- */
+/* ----------------------------------------------------- 4-quadrant stage --- */
 
 .stage {
   height: 100vh;
@@ -180,7 +180,7 @@ button {
   margin-bottom: 10px;
 }
 
-/* Os dois quadrantes inferiores trazem os `<section class="panel">` originais. */
+/* The two lower quadrants bring the original `<section class="panel">` elements. */
 .q > .panel {
   flex: 1;
   min-height: 0;
@@ -192,7 +192,7 @@ button {
   overflow: hidden auto;
 }
 
-/* ------------------------------------------------------------ Cabeçalho --- */
+/* --------------------------------------------------------------- Header --- */
 
 .header {
   flex: none;
@@ -207,7 +207,7 @@ button {
   letter-spacing: -0.01em;
 }
 
-/* Título à esquerda e a última leitura válida no canto superior direito. */
+/* Title on the left and the last valid reading in the top-right corner. */
 .header__top {
   display: flex;
   flex-wrap: wrap;
@@ -243,7 +243,7 @@ button {
   color: var(--ink-secondary);
 }
 
-/* ------------------------------------------ Equipamentos descobertos --- */
+/* ------------------------------------------- Discovered devices --- */
 
 .devices {
   flex: none;
@@ -281,8 +281,8 @@ button {
   background: var(--card);
 }
 
-/* Bolinha on/off do estado de comunicação, à direita do botão do equipamento.
-   A cor nunca é o único sinal: o `aria-label` descreve o estado. */
+/* On/off dot of the communication state, to the right of the device button.
+   Color is never the only signal: the `aria-label` describes the state. */
 .device__conn {
   justify-self: end;
   align-self: center;
@@ -295,8 +295,8 @@ button {
   box-shadow: 0 0 8px currentColor;
 }
 
-/* Seis níveis: cinza (sem dados), verde (OK), amarelo (atenção), laranja (na
-   bateria), vermelho (alerta crítico) e azul (teste em andamento). */
+/* Six levels: gray (no data), green (OK), yellow (warning), orange (on
+   battery), red (critical alert) and blue (test in progress). */
 .device__conn--unknown {
   color: var(--sem-unknown);
   background: var(--sem-unknown);
@@ -356,7 +356,7 @@ button {
   color: var(--ink-secondary);
 }
 
-/* A descrição reforça a cor da bolinha; o texto é o sinal principal. */
+/* The description reinforces the dot color; the text is the main signal. */
 .device__tag--ok {
   color: var(--sem-good);
 }
@@ -381,8 +381,9 @@ button {
   color: var(--brand);
 }
 
-/* O item é um botão (acessível por teclado): zera a aparência padrão e mantém
-   o layout em coluna; a cor de identidade indica o equipamento em exibição. */
+/* The item is a button (keyboard accessible): it resets the default appearance
+   and keeps the column layout; the identity color indicates the device being
+   displayed. */
 .device__button {
   display: flex;
   flex-direction: column;
@@ -407,7 +408,7 @@ button {
   color: var(--ink-strong);
 }
 
-/* -------------------------------------------------------------- Avisos --- */
+/* -------------------------------------------------------------- Notices --- */
 
 .notices {
   flex: none;
@@ -462,7 +463,7 @@ button {
   border-radius: var(--radius-sm);
 }
 
-/* ------------------------------------------------------------- Painéis --- */
+/* --------------------------------------------------------------- Panels --- */
 
 .panel__empty {
   padding: 10px 12px;
@@ -504,9 +505,9 @@ button {
   min-height: 0;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  /* Em zoom alto, o cartão precisa preservar três faixas internas (gauge,
-     legenda/estado e linha secundária). Se a área ficar curta demais, a grade
-     cresce e o quadrante rola, em vez de sobrepor conteúdo. */
+  /* At high zoom, the card must preserve three internal bands (gauge,
+     caption/status and secondary line). If the area becomes too short, the grid
+     grows and the quadrant scrolls, instead of overlapping content. */
   grid-auto-rows: minmax(240px, 1fr);
   align-content: start;
   gap: clamp(6px, 1vh, 12px);
@@ -535,9 +536,9 @@ button {
 }
 
 .gauge__svg {
-  /* O gauge é o dado principal do cartão: o piso de altura impede que o selo de
-     origem e a linha secundária (que crescem com a fonte do sistema) o
-     espremam a quase nada em telas com zoom/DPI alto. */
+  /* The gauge is the main data of the card: the height floor prevents the
+     origin badge and the secondary line (which grow with the system font) from
+     squeezing it to almost nothing on screens with high zoom/DPI. */
   flex: none;
   min-height: 120px;
   width: 100%;
@@ -568,7 +569,7 @@ button {
 
 .gauge__tick-label {
   fill: var(--ink-secondary);
-  /* Rótulos nos limites das faixas: menores para caberem os limites próximos. */
+  /* Labels at the band limits: smaller so that nearby limits fit. */
   font-size: 8px;
   font-family: var(--font);
 }
@@ -693,7 +694,7 @@ button {
 
 .badge {
   display: inline-block;
-  /* Teto em px para o selo não ofuscar o gauge em telas com fonte ampliada. */
+  /* Cap in px so the badge does not outshine the gauge on screens with enlarged text. */
   font-size: clamp(0.5rem, 0.28vw + 0.35vh, 10px);
   font-weight: 800;
   text-transform: uppercase;
@@ -719,8 +720,8 @@ button {
   gap: 2px;
   padding-top: 3px;
   border-top: 1px dashed var(--line);
-  /* Teto em px: a linha complementar não cresce sem limite com a fonte do
-     sistema — quem precisa de espaço é o gauge. */
+  /* Cap in px: the complementary line does not grow without limit with the
+     system font — the one that needs space is the gauge. */
   font-size: clamp(0.56rem, 0.3vw + 0.4vh, 11px);
   text-align: center;
 }
@@ -763,9 +764,9 @@ button {
   font-size: 0.78rem;
 }
 
-/* Tom da barra lateral do card (ver `flagTone`): verde = normal, laranja =
-   rede ausente, vermelho = crítico, azul = teste em andamento, amarelo =
-   desligamento, cinza = estado inativo. */
+/* Tone of the card side bar (see `flagTone`): green = normal, orange = mains
+   absent, red = critical, blue = test in progress, yellow = shutdown,
+   gray = inactive state. */
 .flag--good {
   border-left-color: var(--sem-good);
 }
@@ -827,7 +828,7 @@ button {
   color: var(--ink-secondary);
 }
 
-/* ------------------------------------------------------------- Detalhes --- */
+/* -------------------------------------------------------------- Details --- */
 
 .details-grid {
   display: grid;
@@ -882,8 +883,8 @@ button {
   word-break: break-all;
 }
 
-/* Variante compacta: usada no bloco "Serviço de telemetria e consultas", onde
-   as linhas trazem pouca informação e não precisam do respiro da tabela .kv. */
+/* Compact variant: used in the "Telemetry service and queries" block, where
+   the rows carry little information and do not need the breathing room of the .kv table. */
 .kv--tight > div {
   padding-bottom: 2px;
   font-size: 0.7rem;
@@ -919,7 +920,7 @@ button {
   font-size: 0.66rem;
 }
 
-/* ------------------------------------------------------------ Botões --- */
+/* ------------------------------------------------------------- Buttons --- */
 
 .btn {
   flex: none;
@@ -956,7 +957,7 @@ button {
   color: var(--ink-strong);
 }
 
-/* ------------------------------------------------- Teste de bateria --- */
+/* ---------------------------------------------------------- Battery test --- */
 
 .battery-test__head {
   flex: none;
@@ -1157,18 +1158,18 @@ button {
   font-size: 0.72rem;
 }
 
-/* Fração desconhecida (teste por alvo sem amostra de carga): barra neutra. */
+/* Unknown fraction (target test with no charge sample): neutral bar. */
 .battery-test__bar > .battery-test__bar-fill--pending {
   background: var(--ink-secondary);
 }
 
-/* -------------------- Bloco B: gráficos e blocos selecionáveis --- */
+/* -------------------- Block B: charts and selectable blocks --- */
 
 .bt-charts {
   flex: none;
   display: grid;
-  /* Os blocos de métrica ficam SEMPRE acima do gráfico, em faixa horizontal:
-     com a barra lateral o gráfico perdia largura e a leitura ficava ruim. */
+  /* The metric blocks are ALWAYS above the chart, in a horizontal strip:
+     with the side bar the chart lost width and the reading became poor. */
   grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   margin-top: 12px;
@@ -1176,7 +1177,7 @@ button {
 
 .bt-charts__list {
   display: grid;
-  /* 1×4 (uma linha, quatro colunas) quando couber; 2×2 em telas estreitas. */
+  /* 1×4 (one row, four columns) when it fits; 2×2 on narrow screens. */
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
   margin: 0;
@@ -1261,8 +1262,8 @@ button {
 
 .bt-charts__axis {
   fill: var(--ink-secondary);
-  /* Em `rem`: o rótulo do eixo acompanha a fonte do sistema, então continua
-     legível quando a tela amplia o texto (zoom/DPI alto). */
+  /* In `rem`: the axis label follows the system font, so it stays legible when
+     the screen enlarges the text (high zoom/DPI). */
   font-size: 0.75rem;
 }
 
@@ -1290,7 +1291,7 @@ button {
   color: var(--ink-secondary);
 }
 
-/* ----------------------------------------------------------- Rolagem --- */
+/* ---------------------------------------------------------- Scrolling --- */
 
 .q::-webkit-scrollbar,
 .q > .panel::-webkit-scrollbar {
@@ -1303,10 +1304,10 @@ button {
   border-radius: 999px;
 }
 
-/* --------------------------------------------------------- Responsivo --- */
+/* --------------------------------------------------------- Responsive --- */
 
-/* Os blocos de métrica do teste de bateria: 4 colunas enquanto houver largura
-   (o quadrante ocupa ~metade da tela no layout de 2×2); abaixo disso, 2×2. */
+/* The metric blocks of the battery test: 4 columns as long as there is width
+   (the quadrant occupies ~half the screen in the 2×2 layout); below that, 2×2. */
 @media (max-width: 1100px) {
   .bt-charts__list {
     grid-template-columns: repeat(2, minmax(0, 1fr));

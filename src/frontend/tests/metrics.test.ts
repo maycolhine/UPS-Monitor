@@ -15,58 +15,58 @@ import {
 
 const definition: GaugeDefinition = {
   id: "input_voltage_v",
-  label: "Tensão de entrada",
+  label: "Input voltage",
   unit: "V",
   sources: [{ path: "data.measurements.input_voltage_v" }],
   scale: { min: 0, max: 300, ticks: [0, 150, 300] },
   bands: [
-    { level: "critical", from: 0, to: 100, label: "Fora da faixa" },
+    { level: "critical", from: 0, to: 100, label: "Out of range" },
     { level: "good", from: 100, to: 200, label: "Normal" },
-    { level: "critical", from: 200, to: 300, label: "Fora da faixa" },
+    { level: "critical", from: 200, to: 300, label: "Out of range" },
   ],
   decimals: 0,
   order: 1,
 };
 
 describe("evaluateBand", () => {
-  it("encontra a faixa que contém o valor", () => {
+  it("finds the band that contains the value", () => {
     expect(evaluateBand(150, definition.bands).level).toBe("good");
     expect(evaluateBand(150, definition.bands).text).toBe("Normal");
   });
 
-  it("inverte para crítico acima do limite", () => {
+  it("flips to critical above the limit", () => {
     expect(evaluateBand(250, definition.bands).level).toBe("critical");
   });
 
-  it("inclui o limite superior na última faixa", () => {
+  it("includes the upper limit in the last band", () => {
     expect(evaluateBand(300, definition.bands).level).toBe("critical");
   });
 
-  it("retorna 'sem dados' para null/undefined/NaN", () => {
+  it("returns 'no data' for null/undefined/NaN", () => {
     expect(evaluateBand(null, definition.bands).level).toBe("unknown");
     expect(evaluateBand(undefined, definition.bands).level).toBe("unknown");
     expect(evaluateBand(Number.NaN, definition.bands).level).toBe("unknown");
   });
 });
 
-describe("limites das faixas", () => {
-  // Mesmas faixas da frequência de entrada (60 Hz nominal deve ser normal).
+describe("band limits", () => {
+  // Same bands as the input frequency (60 Hz nominal must be normal).
   const bands: GaugeBand[] = [
-    { level: "critical", from: 20, to: 42, label: "Frequência fora da faixa (baixa)" },
-    { level: "warning", from: 42, to: 47, label: "Atenção: frequência baixa" },
-    { level: "good", from: 47, to: 53, label: "Frequência normal (50 Hz)" },
-    { level: "warning", from: 53, to: 57, label: "Atenção: frequência fora do ideal" },
-    { level: "good", from: 57, to: 60, label: "Frequência normal (60 Hz)" },
-    { level: "warning", from: 60, to: 63, label: "Atenção: frequência alta" },
-    { level: "critical", from: 63, to: 70, label: "Frequência fora da faixa (alta)" },
+    { level: "critical", from: 20, to: 42, label: "Frequency out of range (low)" },
+    { level: "warning", from: 42, to: 47, label: "Warning: low frequency" },
+    { level: "good", from: 47, to: 53, label: "Normal frequency (50 Hz)" },
+    { level: "warning", from: 53, to: 57, label: "Warning: frequency out of the ideal" },
+    { level: "good", from: 57, to: 60, label: "Normal frequency (60 Hz)" },
+    { level: "warning", from: 60, to: 63, label: "Warning: high frequency" },
+    { level: "critical", from: 63, to: 70, label: "Frequency out of range (high)" },
   ];
 
-  it("classifica 60,0 Hz como normal, e não como frequência alta", () => {
+  it("classifies 60.0 Hz as normal, not as high frequency", () => {
     expect(evaluateBand(60, bands).level).toBe("good");
-    expect(evaluateBand(60, bands).text).toBe("Frequência normal (60 Hz)");
+    expect(evaluateBand(60, bands).text).toBe("Normal frequency (60 Hz)");
   });
 
-  it("o valor exatamente no limite pertence à faixa que termina nele", () => {
+  it("a value exactly at the boundary belongs to the band that ends there", () => {
     expect(evaluateBand(42, bands).level).toBe("critical");
     expect(evaluateBand(47, bands).level).toBe("warning");
     expect(evaluateBand(53, bands).level).toBe("good");
@@ -75,25 +75,25 @@ describe("limites das faixas", () => {
     expect(evaluateBand(70, bands).level).toBe("critical");
   });
 
-  it("bandBoundaries devolve o início/fim de cada faixa, em ordem e sem repetição", () => {
+  it("bandBoundaries returns the start/end of each band, in order and without repetition", () => {
     expect(bandBoundaries(bands)).toEqual([20, 42, 47, 53, 57, 60, 63, 70]);
   });
 });
 
-describe("escala", () => {
-  it("valueFraction limita a fração entre 0 e 1", () => {
+describe("scale", () => {
+  it("valueFraction clamps the fraction between 0 and 1", () => {
     expect(valueFraction(-10, 0, 100)).toBe(0);
     expect(valueFraction(50, 0, 100)).toBe(0.5);
     expect(valueFraction(500, 0, 100)).toBe(1);
   });
 
-  it("valueAngle vai de 180° (mínimo) a 0° (máximo)", () => {
+  it("valueAngle goes from 180° (minimum) to 0° (maximum)", () => {
     expect(valueAngle(0, 0, 100)).toBe(180);
     expect(valueAngle(50, 0, 100)).toBe(90);
     expect(valueAngle(100, 0, 100)).toBe(0);
   });
 
-  it("arcPath gera um caminho SVG válido, com raio igual ao da geometria", () => {
+  it("arcPath generates a valid SVG path, with the same radius as the geometry", () => {
     const path = arcPath(0, 300, definition.scale, {
       cx: GAUGE_GEOMETRY.center.x,
       cy: GAUGE_GEOMETRY.center.y,
@@ -104,7 +104,7 @@ describe("escala", () => {
     expect(path).toContain(`A ${GAUGE_GEOMETRY.radius} ${GAUGE_GEOMETRY.radius}`);
   });
 
-  it("arcPath de um subintervalo não cruza o centro", () => {
+  it("arcPath of a subinterval does not cross the center", () => {
     const [start] = arcPath(0, 300, definition.scale, {
       cx: 110,
       cy: 110,
@@ -118,50 +118,50 @@ describe("escala", () => {
 });
 
 describe("buildGaugeRenderModel", () => {
-  it("monta o modelo com valor válido", () => {
+  it("builds the model with a valid value", () => {
     const model = buildGaugeRenderModel({ definition, value: 150, stale: false });
     expect(model.hasValue).toBe(true);
     expect(model.displayValue).toBe("150");
     expect(model.level).toBe("good");
     expect(model.statusText).toBe("Normal");
-    expect(model.ariaLabel).toContain("Tensão de entrada");
+    expect(model.ariaLabel).toContain("Input voltage");
   });
 
-  it("NÃO converte valor ausente em zero", () => {
+  it("does NOT convert a missing value into zero", () => {
     const missing = buildGaugeRenderModel({ definition, value: undefined, stale: false });
     expect(missing.hasValue).toBe(false);
     expect(missing.displayValue).toBe("—");
-    expect(missing.emptyText).toBe("Sem dados");
+    expect(missing.emptyText).toBe("No data");
     expect(missing.level).toBe("unknown");
   });
 
-  it("trata null explícito como ausência, não como zero", () => {
+  it("treats an explicit null as absence, not as zero", () => {
     const nullValue = buildGaugeRenderModel({ definition, value: null, stale: false });
     expect(nullValue.hasValue).toBe(false);
     expect(nullValue.displayValue).toBe("—");
-    expect(nullValue.statusText).toBe("Sem dados");
+    expect(nullValue.statusText).toBe("No data");
   });
 
-  it("rejeita NaN como valor utilizável", () => {
+  it("rejects NaN as a usable value", () => {
     const invalid = buildGaugeRenderModel({ definition, value: Number.NaN, stale: false });
     expect(invalid.hasValue).toBe(false);
   });
 
-  it("mostra o número, mas rotula como desatualizado, quando stale", () => {
+  it("shows the number, but labels it as stale, when stale", () => {
     const model = buildGaugeRenderModel({ definition, value: 150, stale: true });
     expect(model.hasValue).toBe(true);
     expect(model.displayValue).toBe("150");
-    expect(model.statusText).toBe("Desatualizado");
+    expect(model.statusText).toBe("Stale");
     expect(model.stale).toBe(true);
   });
 
-  it("respeita o número de decimais da definição", () => {
+  it("respects the number of decimals of the definition", () => {
     const model = buildGaugeRenderModel({
       definition: { ...definition, decimals: 1 },
       value: 60.25,
       stale: false,
     });
-    expect(model.displayValue).toBe("60,3");
+    expect(model.displayValue).toBe("60.3");
   });
 });
 
@@ -173,21 +173,21 @@ describe("readMetricPath", () => {
     },
   };
 
-  it("lê pelo caminho exato do contrato", () => {
+  it("reads by the exact contract path", () => {
     expect(readMetricPath(payload, "data.measurements.input_voltage_v")).toBe(219);
     expect(readMetricPath(payload, "data.battery_charge.percent")).toBe(100);
   });
 
-  it("distingue null informado de caminho ausente", () => {
+  it("distinguishes a reported null from an absent path", () => {
     expect(readMetricPath(payload, "data.measurements.output_voltage_v")).toBeNull();
     expect(readMetricPath(payload, "data.measurements.temperature_c")).toBeUndefined();
   });
 
-  it("não converte strings numéricas em número", () => {
+  it("does not convert numeric strings into numbers", () => {
     expect(readMetricPath({ a: "10" }, "a")).toBeUndefined();
   });
 
-  it("retorna undefined ao atravessar nó não-objeto", () => {
+  it("returns undefined when traversing a non-object node", () => {
     expect(readMetricPath({ a: 1 }, "a.b")).toBeUndefined();
     expect(readMetricPath(null, "a")).toBeUndefined();
   });
@@ -196,11 +196,11 @@ describe("readMetricPath", () => {
 describe("resolveGaugeSource", () => {
   const frequency: GaugeDefinition = {
     id: "input_frequency_hz",
-    label: "Frequência de entrada",
+    label: "Input frequency",
     unit: "Hz",
     sources: [
       { path: "data.measurements.input_frequency_hz" },
-      { path: "data.measurements.output_frequency_hz", label: "Frequência de saída" },
+      { path: "data.measurements.output_frequency_hz", label: "Output frequency" },
     ],
     scale: { min: 20, max: 70, ticks: [20, 70] },
     bands: [{ level: "good", from: 20, to: 70, label: "Normal" }],
@@ -208,34 +208,34 @@ describe("resolveGaugeSource", () => {
     order: 3,
   };
 
-  it("escolhe a primeira origem presente no payload (megatec-q1 → entrada)", () => {
+  it("chooses the first source present in the payload (megatec-q1 → input)", () => {
     const payload = { data: { measurements: { input_frequency_hz: 60 } } };
     const resolved = resolveGaugeSource(frequency, payload);
     expect(resolved.source?.path).toBe("data.measurements.input_frequency_hz");
     expect(resolved.value).toBe(60);
   });
 
-  it("cai para a origem seguinte quando o protocolo publica o outro caminho (sms-1phase → saída)", () => {
+  it("falls back to the next source when the protocol publishes the other path (sms-1phase → output)", () => {
     const payload = { data: { measurements: { output_frequency_hz: 59.9 } } };
     const resolved = resolveGaugeSource(frequency, payload);
     expect(resolved.source?.path).toBe("data.measurements.output_frequency_hz");
     expect(resolved.value).toBe(59.9);
   });
 
-  it("trata null explícito como origem presente (nunca cai para outro protocolo)", () => {
+  it("treats an explicit null as a present source (never falls back to another protocol)", () => {
     const payload = { data: { measurements: { input_frequency_hz: null, output_frequency_hz: 59.9 } } };
     const resolved = resolveGaugeSource(frequency, payload);
     expect(resolved.source?.path).toBe("data.measurements.input_frequency_hz");
     expect(resolved.value).toBeNull();
   });
 
-  it("sem nenhum caminho presente, devolve a primeira origem e valor ausente", () => {
+  it("with no path present, returns the first source and a missing value", () => {
     const resolved = resolveGaugeSource(frequency, { data: { measurements: {} } });
     expect(resolved.source?.path).toBe("data.measurements.input_frequency_hz");
     expect(resolved.value).toBeUndefined();
   });
 
-  it("usa o rótulo da origem escolhida no modelo do gauge", () => {
+  it("uses the label of the chosen source in the gauge model", () => {
     const payload = { data: { measurements: { output_frequency_hz: 59.9 } } };
     const resolved = resolveGaugeSource(frequency, payload);
     const model = buildGaugeRenderModel({
@@ -244,7 +244,7 @@ describe("resolveGaugeSource", () => {
       stale: false,
       source: resolved.source,
     });
-    expect(model.label).toBe("Frequência de saída");
-    expect(model.ariaLabel).toContain("Frequência de saída");
+    expect(model.label).toBe("Output frequency");
+    expect(model.ariaLabel).toContain("Output frequency");
   });
 });

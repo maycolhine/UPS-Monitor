@@ -1,0 +1,61 @@
+# Example systemd unit for the UNIFIED UPS REST API (upsmon).
+#
+# MIND THE NAME: `upsmon.service` is ALREADY USED by the NUT package (alias of
+# nut-monitor.service). That is why the unified API unit is named
+# `upsmon-api.service` -- installing it as `upsmon.service` would overwrite NUT.
+#
+# Automated installation (recommended):
+#   sudo scripts/install_service.sh
+#
+# Manual installation:
+#   sudo install -m 0644 config/examples/upsmon-api.service /etc/systemd/system/
+#   sudo install -d /etc/upsmon
+#   sudo install -m 0640 config/examples/upsmon.conf /etc/upsmon/upsmon.conf
+#   sudo install -m 0644 config/examples/99-upsmon.rules /etc/udev/rules.d/
+#   sudo systemctl daemon-reload && sudo udevadm control --reload-rules && sudo udevadm trigger
+#   sudo systemctl enable --now upsmon-api
+#   journalctl -u upsmon-api -f
+#
+# Note: the project path contains spaces. A unit file does NOT use quotes
+# (systemd reads the whole value up to the end of the line); in URLs, a space
+# becomes %%20 (the % sign is escaped as %% in unit files).
+# Adjust WorkingDirectory/ExecStart and User according to the host (the installer does it automatically).
+#
+# The unified API REPLACES the per-device services (ts-shara-api.service and
+# sms-api.service): the serial port has an exclusive lock, so the old services
+# must stay disabled while upsmon-api runs.
+#
+# Cable disconnected: the service does NOT exit. The collector for that device keeps
+# retrying every poll_interval_s and the API keeps responding -- /health = 503
+# "degraded" and /telemetry = 503 with communication.state = port_unavailable/
+# disconnected and last_error filled in (no fictitious values). The OTHER
+# devices keep being collected normally. When the cable is reconnected, the
+# udev rule (config/examples/99-upsmon.rules) restarts the service.
+
+[Unit]
+Description=Unified REST API for UPS telemetry (upsmon, multiprotocol)
+Documentation=file:/opt/UPS%%20Monitor/monitor/docs/unified-api.md
+After=network-online.target
+Wants=network-online.target
+# no restart limit: a missing cable at boot must not exhaust the attempts
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+# the user must belong to the dialout group to access /dev/ttyUSB0 and /dev/ttyACM0
+User=upsmon
+Group=dialout
+WorkingDirectory=/opt/UPS Monitor/monitor
+ExecStart=/usr/bin/python3 -m upsmon --config /etc/upsmon/upsmon.conf
+# always restart (drop, unhandled exception, IP/HTTP port unavailable at boot)
+Restart=always
+RestartSec=5
+# no extra privileges; nothing is written to disk (state kept in memory only)
+NoNewPrivileges=true
+PrivateTmp=true
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=upsmon-api
+
+[Install]
+WantedBy=multi-user.target

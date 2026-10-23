@@ -1,27 +1,27 @@
 # =============================================================================
 # UPS Monitor — Web Viewer
 #
-#   cp .env.example .env      # ajuste UPS_API_BASE_URL
+#   cp .env.example .env      # adjust UPS_API_BASE_URL
 #   docker compose up --build -d
 #   docker compose logs -f
 #   docker compose down
 #
-# O Compose lê o arquivo `.env` da mesma pasta para substituir as variáveis
-# `${...}` abaixo. Variáveis ausentes caem nos valores padrão.
+# Compose reads the `.env` file in this same folder to substitute the `${...}`
+# variables below. Missing variables fall back to their default values.
 # =============================================================================
 
 services:
-  ups-web-viewer:
+  ups-monitor-viewer:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ups-web-viewer:1.0.0
-    container_name: ups-web-viewer
+    image: ups-monitor-viewer:1.0.0
+    container_name: ups-monitor-viewer
     restart: unless-stopped
 
-    # Porta publicada no host → porta interna do container.
-    # A porta interna já é a 8080 do backend; se escolher 8080 no host,
-    # ela conflita com a API de telemetria.
+    # Port published on the host → internal container port.
+    # The internal port is the backend's 8080; choosing 8080 on the host would
+    # clash with the telemetry API.
     ports:
       - "${VIEWER_HTTP_PORT:-8090}:8080"
 
@@ -30,10 +30,10 @@ services:
       VIEWER_HTTP_PORT: "8080"
       VIEWER_STATIC_DIR: "/app/public"
 
-      # Endereço da API de telemetria. Dentro do container `localhost` é o
-      # próprio container — use host.docker.internal ou o IP de rede do host.
+      # Address of the telemetry API. Inside the container `localhost` is the
+      # container itself — use host.docker.internal or the host's network address.
       UPS_API_BASE_URL: "${UPS_API_BASE_URL:-http://host.docker.internal:8080}"
-      # Vazio = descobre o equipamento por GET /api/v1/ups.
+      # Empty = discover the device through GET /api/v1/ups.
       UPS_DEVICE_ID: "${UPS_DEVICE_ID:-}"
 
       UPS_API_TIMEOUT_MS: "${UPS_API_TIMEOUT_MS:-4000}"
@@ -42,11 +42,11 @@ services:
 
       VIEWER_REFRESH_INTERVAL_MS: "${VIEWER_REFRESH_INTERVAL_MS:-5000}"
       VIEWER_LOG_LEVEL: "${VIEWER_LOG_LEVEL:-info}"
-      # JSON opcional com as faixas provisórias dos gauges (ver .env.example).
+      # Optional JSON with the provisional gauge bands (see .env.example).
       VIEWER_GAUGE_THRESHOLDS: "${VIEWER_GAUGE_THRESHOLDS:-}"
 
-    # Faz `host.docker.internal` apontar para a máquina Ubuntu que hospeda a API
-    # (no Linux isso não é automático como no Docker Desktop).
+    # Makes `host.docker.internal` resolve to the Linux machine that hosts the
+    # API (on Linux this is not automatic as it is on Docker Desktop).
     extra_hosts:
       - "host.docker.internal:host-gateway"
 

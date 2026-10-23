@@ -22,13 +22,13 @@ import {
 } from "../src/model/batteryTest.js";
 
 /**
- * O modelo do teste de bateria é puro e não fala com a rede. Os casos abaixo
- * cobrem a regra de ouro do projeto: a API entrega FATOS e o viewer APRESENTA —
- * `estimate.available: false` nunca vira número.
+ * The battery test model is pure and does not talk to the network. The cases
+ * below cover the project golden rule: the API delivers FACTS and the viewer
+ * PRESENTS — `estimate.available: false` never becomes a number.
  */
 
 describe("readTestSupport", () => {
-  it("lê as capacidades declaradas pela API (contrato 3.0)", () => {
+  it("reads the capabilities declared by the API (contract 3.0)", () => {
     const support = readTestSupport({
       battery_test: {
         supported: true,
@@ -55,12 +55,12 @@ describe("readTestSupport", () => {
       minBatteryPercent: 50,
       testTypes: ["duration_10s", "discharge_20pct"],
     });
-    // O detalhe de cada tipo (janela × alvo/teto) vem de `types.<type>`.
+    // The detail of each type (window × target/ceiling) comes from `types.<type>`.
     expect(support.types["discharge_20pct"]?.target_percent).toBe(20);
     expect(support.types["discharge_20pct"]?.timeout_s).toBe(1800);
   });
 
-  it("trata ausência de capacidades como não suportado (sem inventar padrões)", () => {
+  it("treats missing capabilities as unsupported (without inventing defaults)", () => {
     const support = readTestSupport(undefined);
     expect(support.supported).toBe(false);
     expect(support.enabled).toBe(false);
@@ -68,18 +68,18 @@ describe("readTestSupport", () => {
     expect(support.durationS).toBeNull();
   });
 
-  it("não promete cancelamento quando o equipamento não o suporta", () => {
+  it("does not promise cancellation when the device does not support it", () => {
     const support = readTestSupport({
       battery_test: { supported: true, enabled: false, abort_supported: false, cooldown_s: 300 },
     });
     const guards = buildTestGuards(support);
-    expect(guards.join(" ")).toContain("não cancela");
-    expect(guards.join(" ")).toContain("Espera de 5 min");
+    expect(guards.join(" ")).toContain("does not cancel");
+    expect(guards.join(" ")).toContain("Wait of 5 min");
   });
 });
 
 describe("buildEstimateView", () => {
-  it("apresenta a autonomia como extrapolação, com a confiança da API", () => {
+  it("presents the runtime as an extrapolation, with the API confidence", () => {
     const view = buildEstimateView({
       available: true,
       method: "linear_charge_extrapolation",
@@ -92,39 +92,39 @@ describe("buildEstimateView", () => {
     });
     expect(view.available).toBe(true);
     expect(view.runtimeText).toBe("2 min 12 s");
-    expect(view.note).toContain("Extrapolação linear de 1ª ordem");
-    expect(view.note).toContain("confiança low");
-    expect(view.note).toContain("Estimativa, não medição");
-    expect(view.dischargeRateText).toBe("44,9 p.p./min");
-    expect(view.dropText).toBe("7,5 p.p. em 10,0 s");
+    expect(view.note).toContain("First-order linear extrapolation");
+    expect(view.note).toContain("confidence low");
+    expect(view.note).toContain("Estimate, not a measurement");
+    expect(view.dischargeRateText).toBe("44.9 p.p./min");
+    expect(view.dropText).toBe("7.5 p.p. in 10.0 s");
   });
 
-  it("trata o teto de sanidade como piso, não como precisão", () => {
+  it("treats the sanity ceiling as a floor, not as precision", () => {
     const view = buildEstimateView({
       available: true,
       estimated_runtime_min: 600,
       capped_at_min: 600,
       confidence: "low",
     });
-    expect(view.runtimeText).toBe("≥ 10 h (extrapolação)");
+    expect(view.runtimeText).toBe("≥ 10 h (extrapolation)");
   });
 
-  it("nunca inventa número quando a API marca a estimativa como indisponível", () => {
+  it("never invents a number when the API marks the estimate as unavailable", () => {
     const view = buildEstimateView({
       available: false,
-      reason: "queda de carga abaixo da resolucao mensuravel",
+      reason: "charge drop below the measurable resolution",
       confidence: "low",
     });
     expect(view.available).toBe(false);
     expect(view.runtimeText).toBe("—");
-    expect(view.note).toBe("Sem autonomia estimada: queda de carga abaixo da resolucao mensuravel");
+    expect(view.note).toBe("No estimated runtime: charge drop below the measurable resolution");
   });
 
-  it("avisa quando a API marca disponível mas omite a autonomia", () => {
+  it("warns when the API marks it available but omits the runtime", () => {
     const view = buildEstimateView({ available: true, confidence: "low" });
     expect(view.available).toBe(false);
     expect(view.runtimeText).toBe("—");
-    expect(view.note).toContain("não publicou a autonomia");
+    expect(view.note).toContain("did not publish the runtime");
   });
 });
 
@@ -135,35 +135,35 @@ describe("buildObservationView", () => {
     flags_seen: ["BEEP", "OB", "TEST"],
   };
 
-  it("confirma quando o equipamento reportou a flag TEST", () => {
+  it("confirms when the device reported the TEST flag", () => {
     const view = buildObservationView(base);
     expect(view.observed).toBe(true);
     expect(view.level).toBe("good");
-    expect(view.text).toContain("reportou a flag TEST");
+    expect(view.text).toContain("reported the TEST flag");
   });
 
-  it("avisa quando o TEST apareceu nas amostras mas a API não confirmou", () => {
+  it("warns when the TEST appeared in the samples but the API did not confirm it", () => {
     const view = buildObservationView({ ...base, test_flag_observed: false });
     expect(view.observed).toBe(false);
     expect(view.level).toBe("warning");
-    expect(view.text).toContain("não a confirmou");
+    expect(view.text).toContain("did not confirm it");
   });
 
-  it("avisa quando o estado de teste não foi observado na janela", () => {
+  it("warns when the test state was not observed in the window", () => {
     const view = buildObservationView({ status: "completed", test_flag_observed: false, flags_seen: ["OB"] });
     expect(view.observed).toBe(false);
-    expect(view.text).toContain("NÃO reportou o estado de teste");
+    expect(view.text).toContain("did NOT report the test state");
   });
 
-  it("mantém o estado indefinido enquanto o teste corre", () => {
+  it("keeps the state undefined while the test runs", () => {
     const view = buildObservationView({ status: "running", test_flag_observed: true, flags_seen: [] });
     expect(view.observed).toBeNull();
     expect(view.level).toBe("unknown");
   });
 });
 
-describe("tipos de teste", () => {
-  it("oferece SOMENTE os tipos declarados em test_types", () => {
+describe("test types", () => {
+  it("offers ONLY the types declared in test_types", () => {
     const support = readTestSupport({
       battery_test: {
         supported: true,
@@ -177,20 +177,20 @@ describe("tipos de teste", () => {
     });
     const options = buildTestTypeOptions(support);
     expect(options.map((option) => option.type)).toEqual(["duration_10s", "discharge_20pct"]);
-    expect(options[0]?.label).toBe("Teste rápido (~10 s)");
+    expect(options[0]?.label).toBe("Quick test (~10 s)");
     expect(options[0]?.isTarget).toBe(false);
-    expect(options[1]?.label).toBe("Descarga controlada (até 20 %)");
+    expect(options[1]?.label).toBe("Controlled discharge (up to 20 %)");
     expect(options[1]?.isTarget).toBe(true);
     expect(options[1]?.params?.target_percent).toBe(20);
   });
 
-  it("não oferece tipo algum quando a API não publica test_types", () => {
-    // O `megatec-q1` só lista `duration_10s`; sem lista, o seletor fica vazio em
-    // vez de inventar um tipo que a API recusaria com 422.
+  it("offers no type at all when the API does not publish test_types", () => {
+    // The `megatec-q1` only lists `duration_10s`; without a list, the selector
+    // stays empty instead of inventing a type the API would reject with 422.
     expect(buildTestTypeOptions(readTestSupport({ battery_test: { enabled: true } }))).toEqual([]);
   });
 
-  it("descreve o tipo escolhido por janela × alvo", () => {
+  it("describes the chosen type by window × target", () => {
     const support = readTestSupport({
       battery_test: {
         enabled: true,
@@ -202,17 +202,17 @@ describe("tipos de teste", () => {
       },
     });
     const [windowOption, targetOption] = buildTestTypeOptions(support);
-    expect(describeTestTypeParams(windowOption ?? null)).toBe("Janela de 10,0 s");
-    expect(describeTestTypeParams(targetOption ?? null)).toBe("Descarga até 20%");
+    expect(describeTestTypeParams(windowOption ?? null)).toBe("Window of 10.0 s");
+    expect(describeTestTypeParams(targetOption ?? null)).toBe("Discharge to 20%");
     expect(describeTestTypeParams(null)).toBe("—");
-    expect(describeTestType("discharge_20pct")).toBe("Descarga controlada (até 20 %)");
-    // Tipo novo mantém o próprio nome da API.
-    expect(describeTestType("tipo_novo")).toBe("tipo_novo");
+    expect(describeTestType("discharge_20pct")).toBe("Controlled discharge (up to 20 %)");
+    // A new type keeps the API's own name.
+    expect(describeTestType("new_type")).toBe("new_type");
   });
 });
 
-describe("séries dos gráficos", () => {
-  it("ignora a chave ausente — a série indisponível nunca vira zero", () => {
+describe("chart series", () => {
+  it("ignores the absent key — the unavailable series never becomes zero", () => {
     const points = buildChartPoints(
       [
         { offset_s: 0, normalized: { output_voltage_v: 218 } },
@@ -226,7 +226,7 @@ describe("séries dos gráficos", () => {
     expect(buildChartPoints(null, "output_voltage_v")).toEqual([]);
   });
 
-  it("monta as quatro métricas na ordem da barra lateral", () => {
+  it("builds the four metrics in the order of the side bar", () => {
     const models = buildTestChartModels({
       samples: [
         {
@@ -266,17 +266,17 @@ describe("séries dos gráficos", () => {
       "battery_charge_percent",
     ]);
     expect(models[0]?.available).toBe(true);
-    expect(models[0]?.variationText).toBe("Oscilação 1,0 V");
-    expect(models[1]?.variationText).toBe("Oscilação 0,2 Hz");
-    expect(models[2]?.variationText).toBe("Variação +1,0 °C");
-    expect(models[3]?.variationText).toBe("Queda -10,0 p.p.");
-    // A linha do alvo só existe na carga da bateria.
+    expect(models[0]?.variationText).toBe("Oscillation 1.0 V");
+    expect(models[1]?.variationText).toBe("Oscillation 0.2 Hz");
+    expect(models[2]?.variationText).toBe("Variation +1.0 °C");
+    expect(models[3]?.variationText).toBe("Drop -10.0 p.p.");
+    // The target line only exists on the battery charge.
     expect(models[0]?.reference).toBeNull();
     expect(models[3]?.reference).toBe(20);
-    expect(models[3]?.referenceLabel).toBe("alvo 20%");
+    expect(models[3]?.referenceLabel).toBe("target 20%");
   });
 
-  it("marca como indisponível a métrica que o equipamento não publicou", () => {
+  it("marks as unavailable the metric the device did not publish", () => {
     const models = buildTestChartModels({
       samples: [{ offset_s: 0, normalized: { output_voltage_v: 218 } }],
       target_percent: null,
@@ -289,16 +289,16 @@ describe("séries dos gráficos", () => {
   });
 });
 
-describe("geometria do gráfico", () => {
-  it("formata o eixo X em segundos curtos e em m:ss nos testes longos", () => {
-    expect(formatOffsetSeconds(0)).toBe("0,0 s");
-    expect(formatOffsetSeconds(9.6)).toBe("9,6 s");
-    expect(formatOffsetSeconds(12)).toBe("12,0 s");
-    expect(formatOffsetSeconds(125)).toBe("125,0 s");
+describe("chart geometry", () => {
+  it("formats the X axis in short seconds and in m:ss for long tests", () => {
+    expect(formatOffsetSeconds(0)).toBe("0.0 s");
+    expect(formatOffsetSeconds(9.6)).toBe("9.6 s");
+    expect(formatOffsetSeconds(12)).toBe("12.0 s");
+    expect(formatOffsetSeconds(125)).toBe("125.0 s");
     expect(formatOffsetSeconds(125, true)).toBe("2:05");
   });
 
-  it("projeta a série no SVG com eixo Y de folga e eixo X de tempo", () => {
+  it("projects the series into the SVG with a padded Y axis and time X axis", () => {
     const geometry = buildLineChart(
       [
         { x: 0, y: 218 },
@@ -310,13 +310,13 @@ describe("geometria do gráfico", () => {
     expect(geometry).not.toBeNull();
     expect(geometry?.path.startsWith("M")).toBe(true);
     expect(geometry?.yTicks).toHaveLength(4);
-    expect(geometry?.xTicks.map((tick) => tick.text)).toEqual(["0,0 s", "5,0 s", "10,0 s"]);
+    expect(geometry?.xTicks.map((tick) => tick.text)).toEqual(["0.0 s", "5.0 s", "10.0 s"]);
     expect(geometry?.plotLeft).toBe(42);
     expect(geometry?.plotRight).toBe(188);
     expect(geometry?.referencePos).toBeNull();
   });
 
-  it("usa m:ss em todos os rótulos quando a janela passa de um minuto", () => {
+  it("uses m:ss in all labels when the window exceeds one minute", () => {
     const geometry = buildLineChart(
       [
         { x: 0, y: 100 },
@@ -328,7 +328,7 @@ describe("geometria do gráfico", () => {
     expect(geometry?.xTicks.map((tick) => tick.text)).toEqual(["0:00", "4:06", "8:12"]);
   });
 
-  it("posiciona a linha do alvo dentro da área de plotagem", () => {
+  it("positions the target line inside the plot area", () => {
     const geometry = buildLineChart(
       [
         { x: 0, y: 100 },
@@ -342,13 +342,13 @@ describe("geometria do gráfico", () => {
     expect(pos).toBeLessThan(100);
   });
 
-  it("não desenha nada quando a série está vazia", () => {
+  it("draws nothing when the series is empty", () => {
     expect(buildLineChart([], { width: 200, height: 100, decimals: 1 })).toBeNull();
   });
 });
 
 describe("buildTestProgress", () => {
-  it("no teste de janela, usa o tempo decorrido sobre a janela pedida", () => {
+  it("in the window test, uses the elapsed time over the requested window", () => {
     const view = buildTestProgress(
       {
         status: "running",
@@ -359,17 +359,18 @@ describe("buildTestProgress", () => {
     );
     expect(view?.mode).toBe("window");
     expect(view?.fraction).toBeCloseTo(0.5, 5);
-    expect(view?.text).toBe("5,0 s de 10,0 s");
+    expect(view?.text).toBe("5.0 s of 10.0 s");
   });
 
-  it("no teste por alvo, progride pela carga e ignora o teto de 30 min", () => {
+  it("in the target test, progresses by the charge and ignores the 30 min ceiling", () => {
     const view = buildTestProgress(
       {
         status: "running",
         type: "discharge_20pct",
         target_percent: 20,
-        // O teto de 30 min é apenas segurança: se fosse usado como janela, a
-        // barra ficaria quase vazia mesmo com metade da descarga concluída.
+        // The 30 min ceiling is only a safety net: if it were used as the
+        // window, the bar would be almost empty even with half the discharge
+        // completed.
         started_at_utc: "2026-10-22T15:20:00.000Z",
         expected_end_at_utc: "2026-10-22T15:50:00.000Z",
         baseline: { battery_charge_percent: 100 },
@@ -379,10 +380,10 @@ describe("buildTestProgress", () => {
     );
     expect(view?.mode).toBe("target");
     expect(view?.fraction).toBeCloseTo(0.375, 5);
-    expect(view?.text).toBe("Descarregando até 20% · atual: 70%");
+    expect(view?.text).toBe("Discharging to 20% · current: 70%");
   });
 
-  it("no teste por alvo, deixa a barra indeterminada enquanto não há carga", () => {
+  it("in the target test, leaves the bar indeterminate while there is no charge", () => {
     const view = buildTestProgress(
       {
         status: "running",
@@ -395,10 +396,10 @@ describe("buildTestProgress", () => {
     );
     expect(view?.mode).toBe("target");
     expect(view?.fraction).toBeNull();
-    expect(view?.text).toContain("aguardando a primeira amostra");
+    expect(view?.text).toContain("waiting for the first sample");
   });
 
-  it("não projeta progresso fora da execução", () => {
+  it("does not project progress outside the execution", () => {
     expect(
       buildTestProgress(
         { status: "completed", started_at_utc: null, expected_end_at_utc: null },
@@ -408,31 +409,31 @@ describe("buildTestProgress", () => {
   });
 });
 
-describe("descrições e histórico", () => {
-  it("traduz status, motivo de encerramento e erros do contrato", () => {
-    expect(describeTestStatus("running")).toBe("Em andamento");
-    expect(describeTestStatus("aborting")).toBe("Cancelando");
-    expect(describeTestStatus("status_novo")).toBe("status_novo");
-    expect(describeFinishReason("duration_elapsed")).toBe("Janela completa do teste");
-    expect(describeFinishReason("target_percent_reached")).toContain("atingiu o alvo");
-    expect(describeFinishReason("watchdog")).toContain("teto de tempo");
+describe("descriptions and history", () => {
+  it("translates status, finish reason and contract errors", () => {
+    expect(describeTestStatus("running")).toBe("Running");
+    expect(describeTestStatus("aborting")).toBe("Aborting");
+    expect(describeTestStatus("new_status")).toBe("new_status");
+    expect(describeFinishReason("duration_elapsed")).toBe("Full test window");
+    expect(describeFinishReason("target_percent_reached")).toContain("reached the test target");
+    expect(describeFinishReason("watchdog")).toContain("time ceiling");
     expect(describeFinishReason(null)).toBe("—");
     expect(describeTestError({ code: "test_cooldown", message: "" })).toContain("cooldown");
-    expect(describeTestError({ code: "battery_at_target", message: "" })).toContain("alvo");
+    expect(describeTestError({ code: "battery_at_target", message: "" })).toContain("target");
     expect(describeTestError({ code: "test_requires_battery_percent", message: "" })).toContain(
-      "percentual da bateria",
+      "battery percentage",
     );
-    expect(describeTestError({ code: "codigo_novo", message: "detalhe da API" })).toBe("detalhe da API");
+    expect(describeTestError({ code: "new_code", message: "API detail" })).toBe("API detail");
     expect(describeTestError(null)).toBe("—");
   });
 
-  it("mapeia o status para a fase visual, sem inventar fase", () => {
+  it("maps the status to the visual phase, without inventing a phase", () => {
     expect(testPhase("completed")).toBe("completed");
     expect(testPhase("aborting")).toBe("unknown");
     expect(testPhase(null)).toBe("unknown");
   });
 
-  it("monta o histórico com os fatos publicados pela API", () => {
+  it("builds the history from the facts published by the API", () => {
     const rows = buildHistoryRows(
       [
         {
@@ -450,17 +451,17 @@ describe("descrições e histórico", () => {
           status: "completed",
           finish_reason: "target_percent_reached",
           flags_seen: [],
-          estimate: { available: false, reason: "queda pequena", confidence: "low" },
+          estimate: { available: false, reason: "small drop", confidence: "low" },
         },
       ],
-      () => "22/10/2026 12:04:11",
+      () => "10/22/2026, 12:04:11 PM",
     );
     expect(rows[0]?.runtimeText).toBe("2 min 12 s");
-    expect(rows[0]?.typeText).toBe("Teste rápido (~10 s)");
-    expect(rows[1]?.typeText).toBe("Descarga controlada (até 20 %)");
-    expect(rows[1]?.finishText).toContain("atingiu o alvo");
+    expect(rows[0]?.typeText).toBe("Quick test (~10 s)");
+    expect(rows[1]?.typeText).toBe("Controlled discharge (up to 20 %)");
+    expect(rows[1]?.finishText).toContain("reached the test target");
     expect(rows[0]?.observedTestFlag).toBe(true);
-    expect(rows[1]?.runtimeText).toBe("sem estimativa (queda pequena)");
+    expect(rows[1]?.runtimeText).toBe("no estimate (small drop)");
     expect(rows[1]?.observedTestFlag).toBe(false);
     expect(buildHistoryRows(null, () => "")).toEqual([]);
   });

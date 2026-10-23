@@ -1,20 +1,21 @@
 /**
- * Definição das métricas exibidas nos gauges semicirculares.
+ * Definition of the metrics shown on the semicircular gauges.
  *
- * IMPORTANTE (escopo §4.2 e §6.1): as faixas vermelho/amarelo/verde abaixo foram
- * **validadas pelo solicitante** em 2026-10-21. Não são limites oficiais do
- * fabricante, mas passam a ser a referência adotada pela interface. Continuam em um
- * único lugar e podem ser substituídas por `VIEWER_GAUGE_THRESHOLDS` (JSON).
+ * IMPORTANT (scope §4.2 and §6.1): the red/yellow/green bands below were
+ * **validated by the requester** on 2026-10-21. They are not official
+ * manufacturer limits, but they become the reference adopted by the interface.
+ * They stay in a single place and can be replaced by `VIEWER_GAUGE_THRESHOLDS` (JSON).
  *
- * Cada gauge declara um ou mais `sources`: caminhos EXATOS do JSON da API, relativos
- * ao payload de telemetria (`/api/v1/ups/{device_id}/telemetry`). Nenhum nome de campo
- * é alterado. Há mais de um caminho porque o mesmo dado aparece em campos diferentes
- * conforme o PROTOCOLO do equipamento — a API unificada é multidispositivo/multiprotocolo:
- *   - carga da bateria: `data.battery_charge.percent` (megatec-q1, estimativa) ou
- *     `data.battery.charge_percent` (sms-1phase, informada pelo equipamento);
- *   - frequência: `data.measurements.input_frequency_hz` (megatec-q1) ou
+ * Each gauge declares one or more `sources`: EXACT paths in the API JSON, relative
+ * to the telemetry payload (`/api/v1/ups/{device_id}/telemetry`). No field name
+ * is changed. There is more than one path because the same reading appears in
+ * different fields depending on the device PROTOCOL — the unified API is
+ * multi-device/multi-protocol:
+ *   - battery charge: `data.battery_charge.percent` (megatec-q1, estimate) or
+ *     `data.battery.charge_percent` (sms-1phase, reported by the device);
+ *   - frequency: `data.measurements.input_frequency_hz` (megatec-q1) or
  *     `data.measurements.output_frequency_hz` (sms-1phase).
- * A ordem da lista é a ordem de preferência (o primeiro caminho presente no payload vence).
+ * The list order is the preference order (the first path present in the payload wins).
  */
 
 export type BandLevel = "critical" | "warning" | "good";
@@ -26,7 +27,7 @@ export interface GaugeBand {
   label: string;
 }
 
-/** Medição complementar exibida junto do gauge (ex.: tensão da bateria). */
+/** Complementary measurement shown alongside the gauge (e.g.: battery voltage). */
 export interface GaugeSecondarySource {
   label: string;
   path: string;
@@ -34,26 +35,27 @@ export interface GaugeSecondarySource {
   decimals: number;
 }
 
-/** Origem de um valor no payload de telemetria (um caminho por protocolo). */
+/** Origin of a value in the telemetry payload (one path per protocol). */
 export interface GaugeSource {
-  /** Caminho exato no payload de telemetria (nomes do contrato, sem renomear). */
+  /** Exact path in the telemetry payload (contract names, no renaming). */
   path: string;
-  /** Rótulo da métrica quando este caminho é usado (padrão: o rótulo do gauge). */
+  /** Metric label when this path is used (default: the gauge label). */
   label?: string;
   /**
-   * Selo de origem exibido no cartão. Só deve afirmar "estimativa" quando a API de
-   * fato estima o valor (o SMS informa o percentual da bateria, então não é estimativa).
+   * Origin badge shown on the card. It should only claim "estimate" when the API
+   * actually estimates the value (the SMS reports the battery percentage, so it is
+   * not an estimate).
    */
   origin_note?: string;
   secondary?: GaugeSecondarySource;
 }
 
 export interface GaugeDefinition {
-  /** Identificador estável da métrica (chave usada em VIEWER_GAUGE_THRESHOLDS). */
+  /** Stable metric identifier (key used in VIEWER_GAUGE_THRESHOLDS). */
   id: string;
   label: string;
   unit: string;
-  /** Caminhos no payload de telemetria, em ordem de preferência. */
+  /** Paths in the telemetry payload, in preference order. */
   sources: GaugeSource[];
   scale: { min: number; max: number; ticks: number[] };
   bands: GaugeBand[];
@@ -62,20 +64,20 @@ export interface GaugeDefinition {
 }
 
 /**
- * Tensão CA: verde nas duas janelas de operação adotadas (127 V e 220 V nominais,
- * com tolerância), vermelho no restante da escala.
+ * AC voltage: green in the two adopted operating windows (127 V and 220 V nominal,
+ * with tolerance), red over the rest of the scale.
  */
 const VOLTAGE_BANDS = [
-  { level: "critical" as BandLevel, from: 0, to: 80, label: "Tensão fora da faixa (baixa)" },
-  { level: "good" as BandLevel, from: 80, to: 127, label: "Dentro da faixa esperada (127 V)" },
-  { level: "critical" as BandLevel, from: 127, to: 200, label: "Tensão fora da faixa (intermediária)" },
-  { level: "good" as BandLevel, from: 200, to: 225, label: "Dentro da faixa esperada (220 V)" },
-  { level: "critical" as BandLevel, from: 225, to: 250, label: "Tensão fora da faixa (alta)" },
+  { level: "critical" as BandLevel, from: 0, to: 80, label: "Voltage out of range (low)" },
+  { level: "good" as BandLevel, from: 80, to: 127, label: "Within the expected range (127 V)" },
+  { level: "critical" as BandLevel, from: 127, to: 200, label: "Voltage out of range (intermediate)" },
+  { level: "good" as BandLevel, from: 200, to: 225, label: "Within the expected range (220 V)" },
+  { level: "critical" as BandLevel, from: 225, to: 250, label: "Voltage out of range (high)" },
 ];
 
 const VOLTAGE_SCALE = { min: 0, max: 250, ticks: [0, 50, 100, 150, 200, 250] };
 
-/** Copia as faixas de tensão para que cada métrica tenha a própria lista mutável. */
+/** Copies the voltage bands so each metric has its own mutable list. */
 function voltageBands(): GaugeBand[] {
   return VOLTAGE_BANDS.map((band) => ({ ...band }));
 }
@@ -83,7 +85,7 @@ function voltageBands(): GaugeBand[] {
 export const GAUGE_DEFINITIONS: GaugeDefinition[] = [
   {
     id: "input_voltage_v",
-    label: "Tensão de entrada",
+    label: "Input voltage",
     unit: "V",
     sources: [{ path: "data.measurements.input_voltage_v" }],
     scale: { ...VOLTAGE_SCALE, ticks: [...VOLTAGE_SCALE.ticks] },
@@ -93,7 +95,7 @@ export const GAUGE_DEFINITIONS: GaugeDefinition[] = [
   },
   {
     id: "output_voltage_v",
-    label: "Tensão de saída",
+    label: "Output voltage",
     unit: "V",
     sources: [{ path: "data.measurements.output_voltage_v" }],
     scale: { ...VOLTAGE_SCALE, ticks: [...VOLTAGE_SCALE.ticks] },
@@ -102,64 +104,64 @@ export const GAUGE_DEFINITIONS: GaugeDefinition[] = [
     order: 2,
   },
   {
-    // O id permanece "input_frequency_hz" porque é a chave estável de configuração;
-    // o rótulo muda conforme o protocolo publique entrada ou saída.
+    // The id stays "input_frequency_hz" because it is the stable configuration key;
+    // the label changes depending on whether the protocol publishes input or output.
     id: "input_frequency_hz",
-    label: "Frequência de entrada",
+    label: "Input frequency",
     unit: "Hz",
     sources: [
       { path: "data.measurements.input_frequency_hz" },
-      { path: "data.measurements.output_frequency_hz", label: "Frequência de saída" },
+      { path: "data.measurements.output_frequency_hz", label: "Output frequency" },
     ],
     scale: { min: 20, max: 70, ticks: [20, 30, 40, 50, 60, 70] },
     bands: [
-      { level: "critical", from: 20, to: 42, label: "Frequência fora da faixa (baixa)" },
-      { level: "warning", from: 42, to: 47, label: "Atenção: frequência baixa" },
-      { level: "good", from: 47, to: 53, label: "Frequência normal (50 Hz)" },
-      { level: "warning", from: 53, to: 57, label: "Atenção: frequência fora do ideal" },
-      { level: "good", from: 57, to: 60, label: "Frequência normal (60 Hz)" },
-      { level: "warning", from: 60, to: 63, label: "Atenção: frequência alta" },
-      { level: "critical", from: 63, to: 70, label: "Frequência fora da faixa (alta)" },
+      { level: "critical", from: 20, to: 42, label: "Frequency out of range (low)" },
+      { level: "warning", from: 42, to: 47, label: "Warning: low frequency" },
+      { level: "good", from: 47, to: 53, label: "Normal frequency (50 Hz)" },
+      { level: "warning", from: 53, to: 57, label: "Warning: frequency outside the ideal" },
+      { level: "good", from: 57, to: 60, label: "Normal frequency (60 Hz)" },
+      { level: "warning", from: 60, to: 63, label: "Warning: high frequency" },
+      { level: "critical", from: 63, to: 70, label: "Frequency out of range (high)" },
     ],
     decimals: 1,
     order: 3,
   },
   {
     id: "temperature_c",
-    label: "Temperatura interna",
+    label: "Internal temperature",
     unit: "°C",
     sources: [{ path: "data.measurements.temperature_c" }],
     scale: { min: 0, max: 50, ticks: [0, 10, 20, 30, 40, 50] },
     bands: [
-      { level: "good", from: 0, to: 25, label: "Temperatura normal" },
-      { level: "warning", from: 25, to: 35, label: "Atenção: temperatura elevada" },
-      { level: "critical", from: 35, to: 50, label: "Temperatura crítica" },
+      { level: "good", from: 0, to: 25, label: "Normal temperature" },
+      { level: "warning", from: 25, to: 35, label: "Warning: elevated temperature" },
+      { level: "critical", from: 35, to: 50, label: "Critical temperature" },
     ],
     decimals: 0,
     order: 4,
   },
   {
     id: "battery_charge_percent",
-    label: "Carga da bateria",
+    label: "Battery charge",
     unit: "%",
     sources: [
       {
-        // megatec-q1: percentual ESTIMADO por interpolação linear da tensão.
+        // megatec-q1: percentage ESTIMATED by linear interpolation of the voltage.
         path: "data.battery_charge.percent",
-        origin_note: "estimativa",
+        origin_note: "estimate",
         secondary: {
-          label: "Tensão da bateria (medição)",
+          label: "Battery voltage (measurement)",
           path: "data.measurements.battery_voltage_v",
           unit: "V",
           decimals: 1,
         },
       },
       {
-        // sms-1phase: percentual INFORMADO pelo equipamento (não é estimativa).
+        // sms-1phase: percentage REPORTED by the device (not an estimate).
         path: "data.battery.charge_percent",
-        origin_note: "informada pelo equipamento",
+        origin_note: "reported by the device",
         secondary: {
-          label: "Tensão da bateria (derivada pela API)",
+          label: "Battery voltage (derived by the API)",
           path: "data.battery.voltage_v",
           unit: "V",
           decimals: 1,
@@ -168,23 +170,23 @@ export const GAUGE_DEFINITIONS: GaugeDefinition[] = [
     ],
     scale: { min: 0, max: 100, ticks: [0, 25, 50, 75, 100] },
     bands: [
-      { level: "critical", from: 0, to: 20, label: "Carga crítica" },
-      { level: "warning", from: 20, to: 40, label: "Atenção: carga baixa" },
-      { level: "good", from: 40, to: 100, label: "Carga adequada" },
+      { level: "critical", from: 0, to: 20, label: "Critical charge" },
+      { level: "warning", from: 20, to: 40, label: "Warning: low charge" },
+      { level: "good", from: 40, to: 100, label: "Adequate charge" },
     ],
     decimals: 0,
     order: 5,
   },
   {
     id: "load_percent",
-    label: "Carga do nobreak",
+    label: "UPS load",
     unit: "%",
     sources: [{ path: "data.measurements.load_percent" }],
     scale: { min: 0, max: 100, ticks: [0, 25, 50, 75, 100] },
     bands: [
-      { level: "good", from: 0, to: 50, label: "Carga adequada" },
-      { level: "warning", from: 50, to: 75, label: "Atenção: carga elevada" },
-      { level: "critical", from: 75, to: 100, label: "Carga crítica" },
+      { level: "good", from: 0, to: 50, label: "Adequate load" },
+      { level: "warning", from: 50, to: 75, label: "Warning: high load" },
+      { level: "critical", from: 75, to: 100, label: "Critical load" },
     ],
     decimals: 0,
     order: 6,
@@ -200,8 +202,8 @@ export interface GaugeConfigResult {
 }
 
 /**
- * Aplica uma sobrescrita parcial (JSON) sobre as faixas padrão.
- * O JSON inválido não é ignorado em silêncio: gera problemas e mantém o padrão.
+ * Applies a partial override (JSON) over the default bands.
+ * Invalid JSON is not silently ignored: it produces problems and keeps the default.
  */
 export function applyGaugeOverrides(rawJson: string | undefined): GaugeConfigResult {
   const gauges = GAUGE_DEFINITIONS.map((definition) => ({
@@ -222,11 +224,11 @@ export function applyGaugeOverrides(rawJson: string | undefined): GaugeConfigRes
   try {
     parsed = JSON.parse(rawJson);
   } catch (error) {
-    problems.push(`VIEWER_GAUGE_THRESHOLDS não é JSON válido: ${(error as Error).message}`);
+    problems.push(`VIEWER_GAUGE_THRESHOLDS is not valid JSON: ${(error as Error).message}`);
     return { gauges, problems };
   }
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    problems.push("VIEWER_GAUGE_THRESHOLDS deve ser um objeto JSON");
+    problems.push("VIEWER_GAUGE_THRESHOLDS must be a JSON object");
     return { gauges, problems };
   }
 
@@ -234,12 +236,12 @@ export function applyGaugeOverrides(rawJson: string | undefined): GaugeConfigRes
     const target = gauges.find((definition) => definition.id === metricId);
     if (!target) {
       problems.push(
-        `VIEWER_GAUGE_THRESHOLDS: métrica '${metricId}' desconhecida (disponíveis: ${METRIC_IDS.join(", ")})`,
+        `VIEWER_GAUGE_THRESHOLDS: unknown metric '${metricId}' (available: ${METRIC_IDS.join(", ")})`,
       );
       continue;
     }
     if (typeof overrideRaw !== "object" || overrideRaw === null || Array.isArray(overrideRaw)) {
-      problems.push(`VIEWER_GAUGE_THRESHOLDS['${metricId}'] deve ser um objeto`);
+      problems.push(`VIEWER_GAUGE_THRESHOLDS['${metricId}'] must be an object`);
       continue;
     }
     const override = overrideRaw as Record<string, unknown>;
@@ -247,13 +249,13 @@ export function applyGaugeOverrides(rawJson: string | undefined): GaugeConfigRes
     const scaleRaw = override["scale"];
     if (scaleRaw !== undefined) {
       if (typeof scaleRaw !== "object" || scaleRaw === null) {
-        problems.push(`VIEWER_GAUGE_THRESHOLDS['${metricId}'].scale deve ser um objeto`);
+        problems.push(`VIEWER_GAUGE_THRESHOLDS['${metricId}'].scale must be an object`);
       } else {
         const scale = scaleRaw as Record<string, unknown>;
         const min = typeof scale["min"] === "number" ? scale["min"] : target.scale.min;
         const max = typeof scale["max"] === "number" ? scale["max"] : target.scale.max;
         if (!(min < max)) {
-          problems.push(`VIEWER_GAUGE_THRESHOLDS['${metricId}'].scale inválida (min >= max)`);
+          problems.push(`VIEWER_GAUGE_THRESHOLDS['${metricId}'].scale invalid (min >= max)`);
         } else {
           target.scale.min = min;
           target.scale.max = max;
@@ -261,7 +263,7 @@ export function applyGaugeOverrides(rawJson: string | undefined): GaugeConfigRes
         if (Array.isArray(scale["ticks"]) && scale["ticks"].every((tick) => typeof tick === "number")) {
           target.scale.ticks = scale["ticks"] as number[];
         } else if (scale["ticks"] !== undefined) {
-          problems.push(`VIEWER_GAUGE_THRESHOLDS['${metricId}'].scale.ticks deve ser lista de números`);
+          problems.push(`VIEWER_GAUGE_THRESHOLDS['${metricId}'].scale.ticks must be a list of numbers`);
         }
       }
     }
@@ -269,13 +271,13 @@ export function applyGaugeOverrides(rawJson: string | undefined): GaugeConfigRes
     const bandsRaw = override["bands"];
     if (bandsRaw !== undefined) {
       if (!Array.isArray(bandsRaw) || bandsRaw.length === 0) {
-        problems.push(`VIEWER_GAUGE_THRESHOLDS['${metricId}'].bands deve ser uma lista não vazia`);
+        problems.push(`VIEWER_GAUGE_THRESHOLDS['${metricId}'].bands must be a non-empty list`);
       } else {
         const bands: GaugeBand[] = [];
         let valid = true;
         bandsRaw.forEach((bandRaw, index) => {
           if (typeof bandRaw !== "object" || bandRaw === null) {
-            problems.push(`VIEWER_GAUGE_THRESHOLDS['${metricId}'].bands[${index}] deve ser um objeto`);
+            problems.push(`VIEWER_GAUGE_THRESHOLDS['${metricId}'].bands[${index}] must be an object`);
             valid = false;
             return;
           }
@@ -286,21 +288,21 @@ export function applyGaugeOverrides(rawJson: string | undefined): GaugeConfigRes
           const label = band["label"];
           if (!LEVELS.includes(level as BandLevel)) {
             problems.push(
-              `VIEWER_GAUGE_THRESHOLDS['${metricId}'].bands[${index}].level deve ser critical|warning|good`,
+              `VIEWER_GAUGE_THRESHOLDS['${metricId}'].bands[${index}].level must be critical|warning|good`,
             );
             valid = false;
             return;
           }
           if (typeof from !== "number" || typeof to !== "number" || !(from < to)) {
             problems.push(
-              `VIEWER_GAUGE_THRESHOLDS['${metricId}'].bands[${index}] precisa de from/to numéricos com from < to`,
+              `VIEWER_GAUGE_THRESHOLDS['${metricId}'].bands[${index}] requires numeric from/to with from < to`,
             );
             valid = false;
             return;
           }
           if (from < target.scale.min || to > target.scale.max) {
             problems.push(
-              `VIEWER_GAUGE_THRESHOLDS['${metricId}'].bands[${index}] fora da escala (${target.scale.min}–${target.scale.max})`,
+              `VIEWER_GAUGE_THRESHOLDS['${metricId}'].bands[${index}] outside the scale (${target.scale.min}–${target.scale.max})`,
             );
             valid = false;
             return;
@@ -316,7 +318,7 @@ export function applyGaugeOverrides(rawJson: string | undefined): GaugeConfigRes
           (band, index) => index === 0 || (bands[index - 1] as GaugeBand).to <= band.from,
         );
         if (!ordered) {
-          problems.push(`VIEWER_GAUGE_THRESHOLDS['${metricId}'].bands deve estar em ordem crescente e sem sobreposição`);
+          problems.push(`VIEWER_GAUGE_THRESHOLDS['${metricId}'].bands must be in ascending order and without overlap`);
           valid = false;
         }
         if (valid) target.bands = bands;
@@ -334,7 +336,7 @@ export function applyGaugeOverrides(rawJson: string | undefined): GaugeConfigRes
   return { gauges, problems };
 }
 
-/** Lê um valor numérico por um caminho (`.`-separado) do payload de telemetria. */
+/** Reads a numeric value by a (`.`-separated) path from the telemetry payload. */
 export function readMetricValue(
   telemetryPayload: unknown,
   sourcePath: string,

@@ -1,6 +1,6 @@
 /**
- * Log mínimo em uma linha por evento (stdout), no mesmo espírito do coletor:
- * sem dependência externa, com nível configurável por VIEWER_LOG_LEVEL.
+ * Minimal log, one line per event (stdout), in the same spirit as the collector:
+ * no external dependency, with a level configurable via VIEWER_LOG_LEVEL.
  */
 export type LogLevel = "debug" | "info" | "warn" | "error";
 

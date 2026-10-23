@@ -1,15 +1,15 @@
 /**
- * DADOS SIMULADOS — NÃO SÃO TELEMETRIA REAL.
+ * SIMULATED DATA — NOT REAL TELEMETRY.
  *
- * Usados apenas quando `VITE_ENABLE_DEMO=true` (arquivo `.env.development`).
- * Servem para validar a hierarquia visual sem depender da API. A interface marca
- * explicitamente esse modo com uma faixa de aviso, e em produção a variável não
- * é definida, portanto este módulo nunca alimenta a tela publicada.
+ * Used only when `VITE_ENABLE_DEMO=true` (file `.env.development`). They serve
+ * to validate the visual hierarchy without depending on the API. The interface
+ * explicitly marks this mode with a warning banner, and in production the
+ * variable is not set, so this module never feeds the published screen.
  *
- * O formato segue o contrato 3.0 (multidispositivo/multiprotocolo): a lista de
- * equipamentos traz dois nobreaks — cada um com `capabilities.battery_test` — e
- * cada gauge declara as origens possíveis por protocolo. A telemetria simulada é
- * a do TS Shara (`megatec-q1`) e o histórico traz um teste já concluído.
+ * The format follows contract 3.0 (multi-device/multi-protocol): the device list
+ * brings two UPS units — each with `capabilities.battery_test` — and each gauge
+ * declares the possible origins per protocol. The simulated telemetry is that of
+ * the TS Shara (`megatec-q1`) and the history brings an already completed test.
  */
 import type { DashboardPayload, GaugeDefinition, ViewerConfigPayload } from "../model/contract.js";
 
@@ -20,81 +20,81 @@ const GENERATED_AT = "2026-10-22T12:00:00.000Z";
 export const DEMO_GAUGES: GaugeDefinition[] = [
   {
     id: "input_voltage_v",
-    label: "Tensão de entrada",
+    label: "Input voltage",
     unit: "V",
     sources: [{ path: "data.measurements.input_voltage_v" }],
     scale: { min: 0, max: 250, ticks: [0, 50, 100, 150, 200, 250] },
     bands: [
-      { level: "critical", from: 0, to: 80, label: "Tensão fora da faixa (baixa)" },
-      { level: "good", from: 80, to: 127, label: "Dentro da faixa esperada (127 V)" },
-      { level: "critical", from: 127, to: 200, label: "Tensão fora da faixa (intermediária)" },
-      { level: "good", from: 200, to: 225, label: "Dentro da faixa esperada (220 V)" },
-      { level: "critical", from: 225, to: 250, label: "Tensão fora da faixa (alta)" },
+      { level: "critical", from: 0, to: 80, label: "Voltage out of range (low)" },
+      { level: "good", from: 80, to: 127, label: "Within the expected range (127 V)" },
+      { level: "critical", from: 127, to: 200, label: "Voltage out of range (intermediate)" },
+      { level: "good", from: 200, to: 225, label: "Within the expected range (220 V)" },
+      { level: "critical", from: 225, to: 250, label: "Voltage out of range (high)" },
     ],
     decimals: 0,
     order: 1,
   },
   {
     id: "output_voltage_v",
-    label: "Tensão de saída",
+    label: "Output voltage",
     unit: "V",
     sources: [{ path: "data.measurements.output_voltage_v" }],
     scale: { min: 0, max: 250, ticks: [0, 50, 100, 150, 200, 250] },
     bands: [
-      { level: "critical", from: 0, to: 80, label: "Tensão fora da faixa (baixa)" },
-      { level: "good", from: 80, to: 127, label: "Dentro da faixa esperada (127 V)" },
-      { level: "critical", from: 127, to: 200, label: "Tensão fora da faixa (intermediária)" },
-      { level: "good", from: 200, to: 225, label: "Dentro da faixa esperada (220 V)" },
-      { level: "critical", from: 225, to: 250, label: "Tensão fora da faixa (alta)" },
+      { level: "critical", from: 0, to: 80, label: "Voltage out of range (low)" },
+      { level: "good", from: 80, to: 127, label: "Within the expected range (127 V)" },
+      { level: "critical", from: 127, to: 200, label: "Voltage out of range (intermediate)" },
+      { level: "good", from: 200, to: 225, label: "Within the expected range (220 V)" },
+      { level: "critical", from: 225, to: 250, label: "Voltage out of range (high)" },
     ],
     decimals: 0,
     order: 2,
   },
   {
     id: "input_frequency_hz",
-    label: "Frequência de entrada",
+    label: "Input frequency",
     unit: "Hz",
     sources: [
       { path: "data.measurements.input_frequency_hz" },
-      { path: "data.measurements.output_frequency_hz", label: "Frequência de saída" },
+      { path: "data.measurements.output_frequency_hz", label: "Output frequency" },
     ],
     scale: { min: 20, max: 70, ticks: [20, 30, 40, 50, 60, 70] },
     bands: [
-      { level: "critical", from: 20, to: 42, label: "Frequência fora da faixa (baixa)" },
-      { level: "warning", from: 42, to: 47, label: "Atenção: frequência baixa" },
-      { level: "good", from: 47, to: 53, label: "Frequência normal (50 Hz)" },
-      { level: "warning", from: 53, to: 57, label: "Atenção: frequência fora do ideal" },
-      { level: "good", from: 57, to: 60, label: "Frequência normal (60 Hz)" },
-      { level: "warning", from: 60, to: 63, label: "Atenção: frequência alta" },
-      { level: "critical", from: 63, to: 70, label: "Frequência fora da faixa (alta)" },
+      { level: "critical", from: 20, to: 42, label: "Frequency out of range (low)" },
+      { level: "warning", from: 42, to: 47, label: "Warning: low frequency" },
+      { level: "good", from: 47, to: 53, label: "Normal frequency (50 Hz)" },
+      { level: "warning", from: 53, to: 57, label: "Warning: frequency outside the ideal" },
+      { level: "good", from: 57, to: 60, label: "Normal frequency (60 Hz)" },
+      { level: "warning", from: 60, to: 63, label: "Warning: high frequency" },
+      { level: "critical", from: 63, to: 70, label: "Frequency out of range (high)" },
     ],
     decimals: 1,
     order: 3,
   },
   {
     id: "temperature_c",
-    label: "Temperatura interna",
+    label: "Internal temperature",
     unit: "°C",
     sources: [{ path: "data.measurements.temperature_c" }],
     scale: { min: 0, max: 50, ticks: [0, 10, 20, 30, 40, 50] },
     bands: [
-      { level: "good", from: 0, to: 25, label: "Temperatura normal" },
-      { level: "warning", from: 25, to: 35, label: "Atenção: temperatura elevada" },
-      { level: "critical", from: 35, to: 50, label: "Temperatura crítica" },
+      { level: "good", from: 0, to: 25, label: "Normal temperature" },
+      { level: "warning", from: 25, to: 35, label: "Warning: elevated temperature" },
+      { level: "critical", from: 35, to: 50, label: "Critical temperature" },
     ],
     decimals: 0,
     order: 4,
   },
   {
     id: "battery_charge_percent",
-    label: "Carga da bateria",
+    label: "Battery charge",
     unit: "%",
     sources: [
       {
         path: "data.battery_charge.percent",
-        origin_note: "estimativa",
+        origin_note: "estimate",
         secondary: {
-          label: "Tensão da bateria (medição)",
+          label: "Battery voltage (measurement)",
           path: "data.measurements.battery_voltage_v",
           unit: "V",
           decimals: 1,
@@ -102,9 +102,9 @@ export const DEMO_GAUGES: GaugeDefinition[] = [
       },
       {
         path: "data.battery.charge_percent",
-        origin_note: "informada pelo equipamento",
+        origin_note: "reported by the device",
         secondary: {
-          label: "Tensão da bateria (derivada pela API)",
+          label: "Battery voltage (derived by the API)",
           path: "data.battery.voltage_v",
           unit: "V",
           decimals: 1,
@@ -113,23 +113,23 @@ export const DEMO_GAUGES: GaugeDefinition[] = [
     ],
     scale: { min: 0, max: 100, ticks: [0, 25, 50, 75, 100] },
     bands: [
-      { level: "critical", from: 0, to: 20, label: "Carga crítica" },
-      { level: "warning", from: 20, to: 40, label: "Atenção: carga baixa" },
-      { level: "good", from: 40, to: 100, label: "Carga adequada" },
+      { level: "critical", from: 0, to: 20, label: "Critical charge" },
+      { level: "warning", from: 20, to: 40, label: "Warning: low charge" },
+      { level: "good", from: 40, to: 100, label: "Adequate charge" },
     ],
     decimals: 0,
     order: 5,
   },
   {
     id: "load_percent",
-    label: "Carga do nobreak",
+    label: "UPS load",
     unit: "%",
     sources: [{ path: "data.measurements.load_percent" }],
     scale: { min: 0, max: 100, ticks: [0, 25, 50, 75, 100] },
     bands: [
-      { level: "good", from: 0, to: 50, label: "Carga adequada" },
-      { level: "warning", from: 50, to: 75, label: "Atenção: carga elevada" },
-      { level: "critical", from: 75, to: 100, label: "Carga crítica" },
+      { level: "good", from: 0, to: 50, label: "Adequate load" },
+      { level: "warning", from: 50, to: 75, label: "Warning: high load" },
+      { level: "critical", from: 75, to: 100, label: "Critical load" },
     ],
     decimals: 0,
     order: 6,
@@ -143,7 +143,7 @@ export const DEMO_CONFIG: ViewerConfigPayload = {
     read_only: true,
     refresh_interval_ms: 5000,
   },
-  upstream: { base_url: "http://(demonstração)/api/v1" },
+  upstream: { base_url: "http://(demo)/api/v1" },
   device_id: DEVICE_ID,
   gauges: DEMO_GAUGES,
   threshold_problems: [],
@@ -157,7 +157,7 @@ export const DEMO_DASHBOARD: DashboardPayload = {
     generated_at_utc: GENERATED_AT,
     refresh_interval_ms: 5000,
     upstream: {
-      base_url: "http://(demonstração)/api/v1",
+      base_url: "http://(demo)/api/v1",
       reachable: true,
       http_status: 200,
       duration_ms: 12,
@@ -166,7 +166,7 @@ export const DEMO_DASHBOARD: DashboardPayload = {
     device_id: DEVICE_ID,
     device_discovered: true,
     upstream_contract: { api_version: "v1", contract_version: "3.0" },
-    warnings: ["MODO DEMONSTRAÇÃO: dados simulados, não são telemetria real."],
+    warnings: ["DEMO MODE: simulated data, not real telemetry."],
     sources: {
       health: { ok: true, http_status: 200, duration_ms: 8, url: "/health", error: null, warnings: [] },
       devices: { ok: true, http_status: 200, duration_ms: 9, url: "/api/v1/ups", error: null, warnings: [] },
@@ -226,9 +226,10 @@ export const DEMO_DASHBOARD: DashboardPayload = {
         telemetry_valid: true,
         telemetry_endpoint: `/api/v1/ups/${DEVICE_ID}/telemetry`,
         identity_endpoint: `/api/v1/ups/${DEVICE_ID}/identity`,
-        // O TS Shara (megatec-q1) NÃO expõe o teste por padrão: `enabled=false`.
-        // O protocolo só oferece a janela de 10 s — a descarga controlada exige
-        // que o equipamento informe o percentual da bateria.
+        // The TS Shara (megatec-q1) does NOT expose the test by default:
+        // `enabled=false`. The protocol only offers the 10 s window — the
+        // controlled discharge requires the device to report the battery
+        // percentage.
         capabilities: {
           battery_test: {
             supported: true,
@@ -256,8 +257,9 @@ export const DEMO_DASHBOARD: DashboardPayload = {
         telemetry_valid: true,
         telemetry_endpoint: `/api/v1/ups/${SMS_DEVICE_ID}/telemetry`,
         identity_endpoint: `/api/v1/ups/${SMS_DEVICE_ID}/identity`,
-        // O SMS informa o percentual da bateria, então oferece também a descarga
-        // controlada: até o alvo de 20 % ou o teto de 30 min, o que vier primeiro.
+        // The SMS reports the battery percentage, so it also offers the
+        // controlled discharge: up to the target of 20 % or the 30 min ceiling,
+        // whichever comes first.
         capabilities: {
           battery_test: {
             supported: true,
@@ -358,8 +360,8 @@ export const DEMO_DASHBOARD: DashboardPayload = {
     },
     communication: { state: "ok", telemetry_valid: true, stale: false, age_seconds: 2 },
   },
-  // Histórico simulado do teste de bateria (contrato 3.0): um teste já concluído,
-  // para validar a hierarquia do painel sem precisar acionar o nobreak.
+  // Simulated battery test history (contract 3.0): an already completed test,
+  // to validate the panel hierarchy without having to trigger the UPS.
   tests: {
     api_version: "v1",
     contract_version: "3.0",

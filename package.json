@@ -1,8 +1,8 @@
 {
-  "name": "ups-web-viewer",
+  "name": "ups-monitor",
   "version": "1.0.0",
   "private": true,
-  "description": "Visualizador web (somente leitura) da telemetria de nobreaks exposta pela API REST local de monitoramento",
+  "description": "Read-only web viewer for the UPS telemetry published by the local monitoring REST API",
   "license": "UNLICENSED",
   "engines": {
     "node": ">=18.19"
@@ -12,11 +12,11 @@
     "src/frontend"
   ],
   "scripts": {
-    "build": "npm run build --workspace @ups-viewer/backend && npm run build --workspace @ups-viewer/frontend",
-    "test": "npm run test --workspace @ups-viewer/backend && npm run test --workspace @ups-viewer/frontend",
-    "test:backend": "npm run test --workspace @ups-viewer/backend",
-    "test:frontend": "npm run test --workspace @ups-viewer/frontend",
-    "dev:backend": "npm run dev --workspace @ups-viewer/backend",
-    "dev:frontend": "npm run dev --workspace @ups-viewer/frontend"
+    "build": "npm run build --workspace @ups-monitor/backend && npm run build --workspace @ups-monitor/frontend",
+    "test": "npm run test --workspace @ups-monitor/backend && npm run test --workspace @ups-monitor/frontend",
+    "test:backend": "npm run test --workspace @ups-monitor/backend",
+    "test:frontend": "npm run test --workspace @ups-monitor/frontend",
+    "dev:backend": "npm run dev --workspace @ups-monitor/backend",
+    "dev:frontend": "npm run dev --workspace @ups-monitor/frontend"
   }
 }

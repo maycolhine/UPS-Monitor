@@ -1,9 +1,9 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
-// O frontend sempre chama a própria origem (mesmo host/porta) e deixa o backend
-// do Web Viewer falar com a API de telemetria. Isso elimina CORS e mantém o
-// endereço da API fora do navegador.
+// The frontend always calls its own origin (same host/port) and lets the Web
+// Viewer backend talk to the telemetry API. This eliminates CORS and keeps the
+// API address out of the browser.
 const backendUrl = process.env["VIEWER_BACKEND_URL"] ?? "http://127.0.0.1:8181";
 
 export default defineConfig({

@@ -1,13 +1,13 @@
 /**
- * Hook de atualização periódica.
+ * Periodic refresh hook.
  *
- * Dois efeitos independentes:
- *  1. `GET /api/config` — lido uma vez (definição dos gauges e intervalo).
- *  2. `GET /api/dashboard` — lido em ciclo, sempre DEPOIS de terminar o
- *     anterior (sem sobreposição de requisições). O ciclo reinicia quando o
- *     intervalo muda OU quando o usuário troca de nobreak (`deviceId`).
+ * Two independent effects:
+ *  1. `GET /api/config` — read once (gauge definitions and interval).
+ *  2. `GET /api/dashboard` — read in a cycle, always AFTER the previous one
+ *     finishes (no overlapping requests). The cycle restarts when the interval
+ *     changes OR when the user switches UPS (`deviceId`).
  *
- * Nada é inferido aqui: o hook só transporta o que o backend informou.
+ * Nothing is inferred here: the hook only carries what the backend reported.
  */
 import { useEffect, useMemo, useState } from "react";
 
@@ -22,9 +22,9 @@ export interface ViewerDataState {
   loading: boolean;
   config: ViewerConfigPayload | null;
   dashboard: DashboardPayload | null;
-  /** Instante (ms) em que o dashboard foi recebido pela última vez. */
+  /** Instant (ms) at which the dashboard was last received. */
   lastFetchAtMs: number | null;
-  /** Falha do próprio Web Viewer (não da API de telemetria). */
+  /** Failure of the Web Viewer itself (not of the telemetry API). */
   fetchError: { code: string; message: string } | null;
   refreshIntervalMs: number;
 }
@@ -46,7 +46,7 @@ export function useViewerData(demoEnabled: boolean, deviceId?: string | null): V
     return Number.isFinite(configured) && configured >= 1000 ? configured : DEFAULT_REFRESH_INTERVAL_MS;
   }, [config, demoEnabled]);
 
-  // 1. Configuração (gauges, intervalo).
+  // 1. Configuration (gauges, interval).
   useEffect(() => {
     if (demoEnabled) return;
     const controller = new AbortController();
@@ -57,7 +57,7 @@ export function useViewerData(demoEnabled: boolean, deviceId?: string | null): V
     return () => controller.abort();
   }, [demoEnabled]);
 
-  // 2. Telemetria (ciclo sem sobreposição).
+  // 2. Telemetry (cycle without overlap).
   useEffect(() => {
     if (demoEnabled) return;
     let cancelled = false;
@@ -70,8 +70,9 @@ export function useViewerData(demoEnabled: boolean, deviceId?: string | null): V
       if (cancelled || controller.signal.aborted) return;
 
       if (result.data) setDashboard(result.data);
-      // Um envelope de erro do backend (502/404) descreve a API de origem, não o
-      // serviço do Web Viewer: nesse caso o payload é a fonte do aviso exibido.
+      // A backend error envelope (502/404) describes the origin API, not the
+      // Web Viewer service: in that case the payload is the source of the
+      // displayed notice.
       setFetchError(isViewerLevelFailure(result) ? result.error : null);
       setLastFetchAtMs(Date.now());
       setLoading(false);

@@ -1,22 +1,22 @@
 /**
- * Painel de leitura da telemetria de nobreaks.
+ * UPS telemetry reading panel.
  *
- * Composição em quatro quadrantes, ocupando exatamente a janela (sem rolagem de
- * página no desktop):
- *   superior esquerdo → contexto do equipamento (identificação, seleção dos
- *                       nobreaks e estado operacional logo abaixo da leitura);
- *   superior direito  → medições (gauges) em grade 2×3;
- *   inferior esquerdo → teste de bateria de ~10 s (previsão de autonomia);
- *   inferior direito  → detalhes, serviço consultado e estado da coleta.
+ * Four-quadrant composition, filling exactly the window (no page scrolling on
+ * the desktop):
+ *   top left     → device context (identification, UPS selection and
+ *                  operational state right below the reading);
+ *   top right    → measurements (gauges) in a 2×3 grid;
+ *   bottom left  → ~10 s battery test (runtime prediction);
+ *   bottom right → details, consulted service and collection state.
  *
- * O quadrante superior esquerdo também lista os equipamentos descobertos em
- * `GET /api/v1/ups`: a lista é a navegação do painel e permite escolher, um de
- * cada vez, qual nobreak é exibido (`GET /api/dashboard?device_id=...`). Cada
- * item traz uma bolinha on/off com o estado de comunicação daquele equipamento.
+ * The top-left quadrant also lists the devices discovered in
+ * `GET /api/v1/ups`: the list is the navigation of the panel and allows choosing,
+ * one at a time, which UPS is displayed (`GET /api/dashboard?device_id=...`). Each
+ * item carries an on/off dot with the communication state of that device.
  *
- * A leitura usa `GET /api/config` e `GET /api/dashboard`; a única escrita é o
- * pedido de teste de bateria (`POST /api/tests`), sempre por ação do usuário —
- * o Web Viewer nunca dispara um teste por conta própria.
+ * The reading uses `GET /api/config` and `GET /api/dashboard`; the only write is
+ * the battery test request (`POST /api/tests`), always by user action — the Web
+ * Viewer never triggers a test on its own.
  */
 import { useMemo, useState } from "react";
 
@@ -46,9 +46,9 @@ import {
 const DEMO_ENABLED = import.meta.env["VITE_ENABLE_DEMO"] === "true";
 
 /**
- * Métricas cujo estado crítico pinta a bolinha de vermelho — o solicitante
- * pediu especificamente tensão de saída, frequência e carga do nobreak (e a
- * carga da bateria em nível crítico, que é a "bateria baixa" medida).
+ * Metrics whose critical state paints the dot red — the requester specifically
+ * asked for output voltage, frequency and UPS load (and the battery charge at a
+ * critical level, which is the measured "low battery").
  */
 const CRITICAL_GAUGE_IDS = new Set([
   "output_voltage_v",
@@ -70,9 +70,9 @@ function describeDevice(brand?: string | null, model?: string | null): string {
 }
 
 export function App() {
-  // Sem seleção, o backend escolhe o equipamento (variável de ambiente, primeiro
-  // válido ou primeiro da lista). A escolha do usuário sobrepõe essa decisão e é
-  // enviada como `?device_id=` — um nobreak por vez, nunca os dois ao mesmo tempo.
+  // Without a selection, the backend chooses the device (environment variable,
+  // first valid or first in the list). The user's choice overrides this decision
+  // and is sent as `?device_id=` — one UPS at a time, never both at once.
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const { demo, loading, config, dashboard, fetchError, refreshIntervalMs } = useViewerData(
     DEMO_ENABLED,
@@ -83,24 +83,24 @@ export function App() {
   const telemetry = dashboard?.telemetry ?? null;
   const identity = dashboard?.identity ?? null;
 
-  // O `device_id` exibido é o que o backend confirmou ter servido (não o pedido).
+  // The displayed `device_id` is the one the backend confirmed it served (not the request).
   const deviceId = viewer?.device_id ?? config?.device_id ?? null;
 
   const deviceEntries = dashboard?.devices?.devices ?? [];
 
-  // O contrato 3.0 publica `capabilities.battery_test` por equipamento: é isso
-  // que decide se o botão do teste pode ser acionado.
+  // Contract 3.0 publishes `capabilities.battery_test` per device: this is what
+  // decides whether the test button can be triggered.
   const selectedDevice = useMemo(
     () => deviceEntries.find((item) => item.device_id === deviceId) ?? null,
     [deviceEntries, deviceId],
   );
   const testSupport = readTestSupport(selectedDevice?.capabilities);
   const deviceLabel =
-    describeDevice(selectedDevice?.brand, selectedDevice?.model) || deviceId || "equipamento";
+    describeDevice(selectedDevice?.brand, selectedDevice?.model) || deviceId || "device";
 
   const testHistory = dashboard?.tests?.tests ?? [];
-  // Um teste já em andamento (iniciado em outra aba ou antes de recarregar) é
-  // apenas OBSERVADO; o hook nunca dispara um teste sozinho.
+  // A test already in progress (started in another tab or before reloading) is
+  // only OBSERVED; the hook never triggers a test by itself.
   const runningTestId = testHistory.find((item) => item.status === "running")?.test_id ?? null;
   const batteryTest = useBatteryTest(deviceId, runningTestId);
 
@@ -110,8 +110,8 @@ export function App() {
   const gaugeModels = useMemo(
     () =>
       gauges.map((definition) => {
-        // A origem é resolvida por payload: cada protocolo publica o mesmo dado em
-        // um campo diferente (ex.: frequência de entrada × de saída).
+        // The source is resolved per payload: each protocol publishes the same
+        // data in a different field (e.g., input × output frequency).
         const resolved = resolveGaugeSource(definition, telemetry);
         return buildGaugeRenderModel({
           definition,
@@ -123,8 +123,8 @@ export function App() {
     [gauges, telemetry, stale],
   );
 
-  // Medição complementar (ex.: tensão da bateria) vem da própria origem escolhida,
-  // com o rótulo e as unidades declarados nessa origem.
+  // Complementary measurement (e.g., battery voltage) comes from the chosen
+  // source itself, with the label and units declared on that source.
   const secondaryFor = (model: GaugeRenderModel): GaugeCardSecondary | undefined => {
     const secondary = model.source?.secondary;
     if (!secondary) return undefined;
@@ -136,16 +136,16 @@ export function App() {
   };
 
   const status = telemetry?.data?.status;
-  // Os bits do quadro têm significado diferente por protocolo: a tabela de
-  // tradução é escolhida pelo `data.source` informado pela API.
+  // The frame bits mean different things per protocol: the translation table is
+  // chosen by the `data.source` reported by the API.
   const protocol = telemetry?.data?.source ?? null;
   const flagsAvailable = Boolean(status);
   const flags = buildFlagViews(status?.flags, status?.active, protocol);
   const unknownFlags = buildUnknownFlagViews(status?.flags, status?.active, protocol);
 
-  // Leituras que resumem a bolinha do equipamento EM EXIBIÇÃO (a API só publica
-  // telemetria do selecionado). Para os demais, a bolinha fica só com o estado
-  // de comunicação — nada é inferido sem dado.
+  // Readings that summarize the dot of the device CURRENTLY DISPLAYED (the API
+  // only publishes telemetry for the selected one). For the others, the dot keeps
+  // only the communication state — nothing is inferred without data.
   const statusSignals = useMemo(() => {
     const activeSet = new Set(status?.active ?? []);
     const flagActive = (id: string): boolean => {
@@ -192,13 +192,13 @@ export function App() {
 
   return (
     <>
-      <a className="skip-link" href="#conteudo">
-        Ir para o conteúdo
+      <a className="skip-link" href="#content">
+        Skip to content
       </a>
 
-      <main id="conteudo" className="stage">
-        {/* Quadrante 1 — contexto do equipamento e estado operacional */}
-        <section className="q q--context" aria-label="Contexto do equipamento">
+      <main id="content" className="stage">
+        {/* Quadrant 1 — device context and operational state */}
+        <section className="q q--context" aria-label="Device context">
           <Header
             productName={config?.viewer.name ?? "UPS Monitor — Web Viewer"}
             lastTelemetryAtUtc={telemetry?.data?.captured_at_utc ?? null}
@@ -206,7 +206,7 @@ export function App() {
           >
             {discovered.length > 0 ? (
               <div className="devices">
-                <p className="devices__label">Nobreaks coletados ({discovered.length})</p>
+                <p className="devices__label">Collected UPS units ({discovered.length})</p>
                 <ul className="devices__list">
                   {discovered.map((item) => {
                     const active = item.id === deviceId;
@@ -221,7 +221,7 @@ export function App() {
                           <span className="device__name">{item.label}</span>
                           <span className="device__id">{item.id}</span>
                           <span className={`device__tag device__tag--${item.status.level}`}>
-                            {active ? "Em exibição" : item.status.label}
+                            {active ? "Displayed" : item.status.label}
                           </span>
                         </button>
                         <span
@@ -242,11 +242,11 @@ export function App() {
 
           {waitingFirstResponse ? (
             <p className="loading" role="status">
-              Consultando o serviço local do Web Viewer…
+              Querying the local Web Viewer service…
             </p>
           ) : null}
 
-          {/* Estado operacional, logo abaixo das informações de leitura. */}
+          {/* Operational state, right below the reading information. */}
           <StatusFlags
             available={flagsAvailable}
             stale={stale}
@@ -256,14 +256,14 @@ export function App() {
           />
         </section>
 
-        {/* Quadrante 2 — medições */}
-        <section className="q q--gauges" aria-labelledby="medidores">
-          <h2 id="medidores" className="q__title">
-            Medições
+        {/* Quadrant 2 — measurements */}
+        <section className="q q--gauges" aria-labelledby="gauges">
+          <h2 id="gauges" className="q__title">
+            Measurements
           </h2>
           {gaugeModels.length === 0 ? (
             <p className="panel__empty">
-              Nenhuma métrica configurada. Verifique `GET /api/config` no serviço do Web Viewer.
+              No metrics configured. Check `GET /api/config` on the Web Viewer service.
             </p>
           ) : (
             <div className="gauge-grid">
@@ -278,7 +278,7 @@ export function App() {
           )}
         </section>
 
-        {/* Quadrante 3 — teste de bateria de ~10 s */}
+        {/* Quadrant 3 — ~10 s battery test */}
         <div className="q">
           <BatteryTest
             support={testSupport}
@@ -288,15 +288,15 @@ export function App() {
           />
         </div>
 
-        {/* Quadrante 4 — detalhes, serviço consultado e coleta */}
+        {/* Quadrant 4 — details, consulted service and collection */}
         <div className="q">
           <Details viewer={viewer} identity={identity} telemetry={telemetry} />
         </div>
 
         <footer className="stage__foot">
-          Leitura por HTTP GET; a única escrita é o pedido de teste de bateria (POST /api/tests),
-          sempre acionado por você. Quem executa o comando no nobreak é a API de telemetria. Faixas
-          dos medidores configuráveis por VIEWER_GAUGE_THRESHOLDS.
+          Read-only over HTTP GET; the only write is the battery test request (POST /api/tests),
+          always triggered by you. The telemetry API executes the command on the UPS. Gauge ranges
+          are configurable via VIEWER_GAUGE_THRESHOLDS.
         </footer>
       </main>
     </>

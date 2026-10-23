@@ -1,24 +1,25 @@
 /**
- * Quadrante de Teste de Bateria (contrato 3.0).
+ * Battery Test quadrant (contract 3.0).
  *
- * Três blocos, conforme a doc do quadrante:
- *  A. controle — seleção do tipo, iniciar e cancelar, com o estado corrente;
- *  B. gráficos — a linha do tempo (`samples[].normalized`) das quatro métricas,
- *     com blocos selecionáveis na barra lateral (`BatteryTestCharts`);
- *  C. resumo — `deltas`/`estimate` e o motivo do encerramento.
+ * Three blocks, per the quadrant doc:
+ *  A. control — type selection, start and cancel, with the current state;
+ *  B. charts — the timeline (`samples[].normalized`) of the four metrics,
+ *     with selectable blocks in the side bar (`BatteryTestCharts`);
+ *  C. summary — `deltas`/`estimate` and the reason for termination.
  *
- * O tipo do teste vem de `capabilities.battery_test.test_types`: `duration_10s`
- * (janela de ~10 s) é oferecido a todos os equipamentos com teste, enquanto
- * `discharge_20pct` (descarga até 20 % ou o teto de 30 min, o que vier primeiro)
- * só aparece onde a própria API o declara — oferecer fora da lista só geraria
- * `422 unsupported_test_type`.
+ * The test type comes from `capabilities.battery_test.test_types`: `duration_10s`
+ * (window of ~10 s) is offered to every device with a test, while
+ * `discharge_20pct` (discharge to 20 % or the 30 min ceiling, whichever comes
+ * first) only appears where the API itself declares it — offering it outside
+ * the list would only produce `422 unsupported_test_type`.
  *
- * O botão apenas PEDE o teste: quem executa o comando no nobreak é a API de
- * origem, e o relatório é acompanhado por polling. Nada é disparado sozinho.
+ * The button only REQUESTS the test: the origin API is the one that runs the
+ * command on the UPS, and the report is followed by polling. Nothing is
+ * triggered on its own.
  *
- * A apresentação segue a regra de ouro da doc de integração (§11.5): a API
- * entrega os fatos; quando `estimate.available` é falso, exibimos o `reason`, e
- * o selo de estimativa nunca é apresentado como medição.
+ * The presentation follows the golden rule of the integration doc (§11.5): the
+ * API delivers the facts; when `estimate.available` is false, we display the
+ * `reason`, and the estimate badge is never presented as a measurement.
  */
 import { useEffect, useState } from "react";
 
@@ -42,10 +43,10 @@ import { BatteryTestCharts } from "./BatteryTestCharts.js";
 
 export interface BatteryTestProps {
   support: BatteryTestSupport;
-  /** Rótulo do equipamento exibido (marca/modelo), para o texto do botão. */
+  /** Displayed device label (brand/model), for the button text. */
   deviceLabel: string;
   state: BatteryTestState;
-  /** Histórico recente do equipamento (`GET .../tests?limit=N`). */
+  /** Recent history of the device (`GET .../tests?limit=N`). */
   history: BatteryTestListItem[];
 }
 
@@ -54,7 +55,7 @@ const HISTORY_LIMIT = 3;
 export function BatteryTest({ support, deviceLabel, state, history }: BatteryTestProps) {
   const { phase, busy, accept, report, error, canAbort, start, abort } = state;
 
-  // Relógio local apenas para a barra de progresso enquanto o teste corre.
+  // Local clock only for the progress bar while the test is running.
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
     if (phase !== "running") return;
@@ -62,8 +63,9 @@ export function BatteryTest({ support, deviceLabel, state, history }: BatteryTes
     return () => window.clearInterval(timer);
   }, [phase]);
 
-  // A escolha do tipo é derivada da lista publicada: se o equipamento mudar (ou
-  // o tipo pedido deixar de existir), o seletor volta sozinho à primeira opção.
+  // The type choice is derived from the published list: if the device changes
+  // (or the requested type no longer exists), the selector falls back on its own
+  // to the first option.
   const [requestedType, setRequestedType] = useState<string>("");
   const typeOptions = buildTestTypeOptions(support);
   const activeType = typeOptions.find((option) => option.type === requestedType) ?? typeOptions[0] ?? null;
@@ -78,25 +80,25 @@ export function BatteryTest({ support, deviceLabel, state, history }: BatteryTes
   const sampleIntervalS = activeType?.params?.sample_interval_s ?? support.sampleIntervalS;
   const sampleLabel =
     durationS !== null && typeof sampleIntervalS === "number" && sampleIntervalS > 0
-      ? `${Math.round(durationS / sampleIntervalS)} amostras`
+      ? `${Math.round(durationS / sampleIntervalS)} samples`
       : null;
 
   const historyRows = buildHistoryRows(history, formatLocalDateTime).filter(
     (row) => row.testId !== report?.test_id,
   );
 
-  const startLabel = activeType?.isTarget ? "Iniciar descarga controlada" : "Testar bateria (10 s)";
+  const startLabel = activeType?.isTarget ? "Start controlled discharge" : "Test battery (10 s)";
 
   return (
-    <section className="panel battery-test" aria-labelledby="teste-bateria">
+    <section className="panel battery-test" aria-labelledby="battery-test">
       <div className="battery-test__head">
-        <h2 id="teste-bateria" className="panel__title">
-          Teste de bateria
+        <h2 id="battery-test" className="panel__title">
+          Battery test
         </h2>
         <div className="battery-test__actions">
           {activeType && typeOptions.length > 1 ? (
             <label className="battery-test__type">
-              <span className="visually-hidden">Tipo de teste</span>
+              <span className="visually-hidden">Test type</span>
               <select
                 value={activeType.type}
                 onChange={(event) => setRequestedType(event.target.value)}
@@ -112,7 +114,7 @@ export function BatteryTest({ support, deviceLabel, state, history }: BatteryTes
           ) : null}
           {canAbort && support.abortSupported ? (
             <button type="button" className="btn btn--ghost" onClick={abort} disabled={busy}>
-              Cancelar
+              Cancel
             </button>
           ) : null}
           <button
@@ -121,7 +123,7 @@ export function BatteryTest({ support, deviceLabel, state, history }: BatteryTes
             onClick={() => start(activeType?.type)}
             disabled={!startable || busy || phase === "running" || activeType === null}
           >
-            {phase === "running" ? "Testando…" : startLabel}
+            {phase === "running" ? "Testing…" : startLabel}
           </button>
         </div>
       </div>
@@ -134,8 +136,8 @@ export function BatteryTest({ support, deviceLabel, state, history }: BatteryTes
       {!startable ? (
         <p className="panel__empty">
           {support.supported
-            ? "O teste de bateria não está habilitado neste equipamento (capabilities.battery_test.enabled = false). A API recusaria o pedido com 403."
-            : "Este equipamento não declara suporte ao teste de bateria (capabilities.battery_test)."}
+            ? "The battery test is not enabled on this device (capabilities.battery_test.enabled = false). The API would reject the request with 403."
+            : "This device does not declare support for the battery test (capabilities.battery_test)."}
         </p>
       ) : null}
 
@@ -158,7 +160,7 @@ export function BatteryTest({ support, deviceLabel, state, history }: BatteryTes
           <div
             className="battery-test__bar"
             role="progressbar"
-            aria-label="Andamento do teste de bateria"
+            aria-label="Battery test progress"
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={progress.fraction === null ? undefined : Math.round(progress.fraction * 100)}
@@ -178,7 +180,7 @@ export function BatteryTest({ support, deviceLabel, state, history }: BatteryTes
 
           <div className="battery-test__grid">
             <div className="battery-test__card">
-              <span className="battery-test__card-label">Situação do teste</span>
+              <span className="battery-test__card-label">Test status</span>
               <strong className={`battery-test__chip battery-test__chip--${phase}`}>
                 {describeTestStatus(report.status)}
               </strong>
@@ -187,19 +189,19 @@ export function BatteryTest({ support, deviceLabel, state, history }: BatteryTes
               </span>
               <span className="battery-test__card-line">
                 {report.duration_s == null
-                  ? `${formatNumber(report.deltas?.sample_count, 0)} amostras`
+                  ? `${formatNumber(report.deltas?.sample_count, 0)} samples`
                   : `${formatNumber(report.duration_s, 1)} s · ${formatNumber(
                       report.deltas?.sample_count,
                       0,
-                    )} amostras`}
+                    )} samples`}
               </span>
             </div>
 
             <div className="battery-test__card">
-              <span className="battery-test__card-label">Previsão de autonomia da bateria</span>
+              <span className="battery-test__card-label">Battery runtime projection</span>
               <strong className="battery-test__estimate">{estimate?.runtimeText}</strong>
               <span className="battery-test__card-line">
-                Taxa de descarga: {estimate?.dischargeRateText} · Queda: {estimate?.dropText}
+                Discharge rate: {estimate?.dischargeRateText} · Drop: {estimate?.dropText}
               </span>
             </div>
           </div>
@@ -212,43 +214,43 @@ export function BatteryTest({ support, deviceLabel, state, history }: BatteryTes
         </>
       ) : (
         <div className="battery-test__idle">
-          <span className="battery-test__card-label">O que o teste devolve</span>
+          <span className="battery-test__card-label">What the test returns</span>
           <ul>
             <li>
-              Gráficos da linha do tempo (tensão de saída, frequência, temperatura interna e carga da
-              bateria) — um bloco por métrica na barra lateral.
+              Timeline charts (output voltage, frequency, internal temperature and battery charge) —
+              one block per metric in the side bar.
             </li>
-            <li>Queda de carga da bateria e oscilação de tensão e frequência na janela.</li>
+            <li>Battery charge drop and voltage and frequency oscillation within the window.</li>
             <li>
-              Autonomia estimada para uma queda real — extrapolação linear de 1ª ordem, marcada como
-              estimativa.
+              Estimated runtime for a real drop — first-order linear extrapolation, flagged as an
+              estimate.
             </li>
-            <li>Confirmação de que o equipamento reportou o estado de teste (flag TEST).</li>
+            <li>Confirmation that the device reported the test state (TEST flag).</li>
             <li>
-              No teste de descarga, o fim é a carga chegar ao alvo ou o teto de tempo — o que vier
-              primeiro.
+              In the discharge test, the end is the charge reaching the target or the time ceiling —
+              whichever comes first.
             </li>
           </ul>
           <p className="battery-test__card-line">
-            Nenhum teste é executado automaticamente: o comando só é enviado ao acionar o botão.
+            No test runs automatically: the command is only sent when the button is pressed.
           </p>
         </div>
       )}
 
       {historyRows.length > 0 ? (
         <>
-          <span className="battery-test__section-label">Testes anteriores</span>
+          <span className="battery-test__section-label">Previous tests</span>
           <table className="battery-test__table">
             <caption className="visually-hidden">
-              Últimos testes de bateria registrados neste equipamento
+              Latest battery tests recorded on this device
             </caption>
             <thead>
               <tr>
-                <th scope="col">Início</th>
-                <th scope="col">Tipo</th>
-                <th scope="col">Situação</th>
-                <th scope="col">Autonomia estimada</th>
-                <th scope="col">Flag TEST</th>
+                <th scope="col">Start</th>
+                <th scope="col">Type</th>
+                <th scope="col">Status</th>
+                <th scope="col">Estimated runtime</th>
+                <th scope="col">TEST flag</th>
               </tr>
             </thead>
             <tbody>
@@ -258,7 +260,7 @@ export function BatteryTest({ support, deviceLabel, state, history }: BatteryTes
                   <td>{row.typeText}</td>
                   <td>{row.statusText}</td>
                   <td>{row.runtimeText}</td>
-                  <td>{row.observedTestFlag ? "observada" : MISSING_TEXT}</td>
+                  <td>{row.observedTestFlag ? "observed" : MISSING_TEXT}</td>
                 </tr>
               ))}
             </tbody>

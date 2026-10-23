@@ -1,0 +1,23 @@
+# udev rule for the UPS units monitored by the unified API (upsmon).
+#
+#   TS Shara Universal UPS Senoidal 3200VA - STM32 Virtual ComPort 0483:5740 -> /dev/ttyACM0
+#   SMS Power Sinus NG uPS3200S           - Prolific USB-Serial       067b:23d3 -> /dev/ttyUSB0
+#
+# Install: sudo install -m 0644 config/examples/99-upsmon.rules /etc/udev/rules.d/
+#          sudo udevadm control --reload-rules && sudo udevadm trigger
+# (the script scripts/install_service.sh does this automatically)
+
+# 1) read/write permission for the dialout group
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="5740", MODE="0660", GROUP="dialout"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="067b", ATTRS{idProduct}=="23d3", MODE="0660", GROUP="dialout"
+
+# 2) prevent ModemManager from probing the ports with AT commands (corrupts communication)
+SUBSYSTEM=="usb", ATTR{idVendor}=="0483", ATTR{idProduct}=="5740", ENV{ID_MM_DEVICE_IGNORE}="1"
+SUBSYSTEM=="usb", ATTR{idVendor}=="067b", ATTR{idProduct}=="23d3", ENV{ID_MM_DEVICE_IGNORE}="1"
+
+# 3) when EITHER cable is reconnected, reopen the port and publish the telemetry
+#    immediately: restarts upsmon (--no-block avoids blocking udev processing).
+#    On removal it does not restart: the collector detects the drop on its own and
+#    the API keeps the last valid reading for that device, marking it as `stale`.
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="5740", ACTION=="add", RUN+="/usr/bin/systemctl restart --no-block upsmon-api.service"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="067b", ATTRS{idProduct}=="23d3", ACTION=="add", RUN+="/usr/bin/systemctl restart --no-block upsmon-api.service"

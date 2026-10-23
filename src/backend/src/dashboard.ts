@@ -1,24 +1,24 @@
 /**
- * Serviço de consulta: transforma os endpoints GET da API de telemetria em um
- * payload único para a interface, preservando os nomes de campo do contrato.
+ * Query service: turns the telemetry API GET endpoints into a single
+ * payload for the interface, preserving the contract field names.
  *
- * O que este módulo faz:
- *  - descobre o equipamento (configuração ou `GET /api/v1/ups`);
- *  - valida o contrato de cada resposta e separa disponibilidade, frescor e comunicação;
- *  - reporta falhas de transporte (timeout, rede, JSON inválido) sem inventar dados;
- *  - mantém um cache curto em memória (sem persistência) para não repetir consultas
- *    em cada ciclo de atualização da interface.
+ * What this module does:
+ *  - discovers the device (configuration or `GET /api/v1/ups`);
+ *  - validates the contract of each response and separates availability, freshness and communication;
+ *  - reports transport failures (timeout, network, invalid JSON) without inventing data;
+ *  - keeps a short in-memory cache (no persistence) to avoid repeating queries
+ *    on each interface refresh cycle.
  *
- * Contrato 3.0 — teste de bateria: este módulo também **repassa** as três ações do
- * teste (`POST .../tests`, `GET .../tests/{id}`, `POST .../tests/{id}/abort`). A
- * escrita é exclusivamente o pedido de teste — `duration_10s` (janela fixa de ~10 s)
- * ou `discharge_20pct` (descarga até o alvo ou o teto de tempo), conforme o `type`
- * enviado pela interface e declarado em `capabilities.battery_test.test_types`; a
- * telemetria continua somente leitura. Quem executa o comando no nobreak é o
- * coletor da API de origem.
+ * Contract 3.0 — battery test: this module also **relays** the three actions of the
+ * test (`POST .../tests`, `GET .../tests/{id}`, `POST .../tests/{id}/abort`). The
+ * write is exclusively the test request — `duration_10s` (fixed window of ~10 s)
+ * or `discharge_20pct` (discharge down to the target or the time cap), according to the `type`
+ * sent by the interface and declared in `capabilities.battery_test.test_types`; the
+ * telemetry remains read-only. Who runs the command on the UPS is the
+ * collector of the upstream API.
  *
- * O que este módulo NÃO faz: ler/abrir porta serial, enviar comandos ao nobreak,
- * gravar histórico ou alterar a API de origem.
+ * What this module does NOT do: read/open the serial port, send commands to the UPS,
+ * record history or change the upstream API.
  */
 import { UpstreamApiClient, type UpstreamResult } from "./apiClient.js";
 import {
@@ -78,7 +78,7 @@ export interface ViewerSection {
   };
   device_id: string | null;
   device_discovered: boolean;
-  /** Versões declaradas pela API na resposta consumida (quando disponível). */
+  /** Versions declared by the API in the consumed response (when available). */
   upstream_contract: { api_version: string; contract_version: string } | null;
   warnings: string[];
   sources: {
@@ -96,7 +96,7 @@ export interface DashboardPayload {
   devices: DevicesPayload | null;
   telemetry: TelemetryPayload | null;
   identity: IdentityPayload | null;
-  /** Histórico recente do teste de bateria (`GET .../tests?limit=N`). */
+  /** Recent battery test history (`GET .../tests?limit=N`). */
   tests: TestsListPayload | null;
 }
 
@@ -105,13 +105,13 @@ export interface DevicesResponsePayload {
   devices: DevicesPayload | null;
 }
 
-/** Aceite do pedido de teste (`POST .../tests` → 202). */
+/** Acceptance of the test request (`POST .../tests` → 202). */
 export interface BatteryTestAcceptPayload {
   viewer: ViewerSection;
   accept: BatteryTestAccept;
 }
 
-/** Relatório do teste (`GET .../tests/{test_id}` → 200, parcial enquanto `running`). */
+/** Test report (`GET .../tests/{test_id}` → 200, partial while `running`). */
 export interface BatteryTestReportPayload {
   viewer: ViewerSection;
   report: BatteryTestReport;
@@ -125,8 +125,8 @@ export interface BatteryTestAbortPayload {
 export interface ViewerErrorPayload {
   viewer: ViewerSection;
   /**
-   * `code` preserva o código da API de origem quando o erro vem dela (ex.:
-   * `test_cooldown`, `battery_too_low`), para a interface explicar o motivo real.
+   * `code` preserves the upstream API code when the error comes from it (e.g.:
+   * `test_cooldown`, `battery_too_low`), so the interface can explain the real reason.
    */
   error: { code: string; message: string };
 }
@@ -153,7 +153,7 @@ const TESTS_PATH = (deviceId: string): string => `/api/v1/ups/${encodeURICompone
 const TEST_PATH = (deviceId: string, testId: string): string =>
   `${TESTS_PATH(deviceId)}/${encodeURIComponent(testId)}`;
 const TEST_ABORT_PATH = (deviceId: string, testId: string): string => `${TEST_PATH(deviceId, testId)}/abort`;
-/** Histórico em memória da API: alguns itens bastam para a tendência. */
+/** In-memory history of the API: a few items are enough for the trend. */
 const TESTS_LIMIT = 10;
 const DEFAULT_TEST_TYPE = "duration_10s";
 
@@ -229,7 +229,7 @@ export class ViewerService {
           viewer,
           error: {
             code: "upstream_contract_mismatch",
-            message: parsed.problems.join("; ") || "resposta de /api/v1/ups fora do contrato",
+            message: parsed.problems.join("; ") || "/api/v1/ups response outside the contract",
           },
         },
       };
@@ -238,12 +238,12 @@ export class ViewerService {
   }
 
   /**
-   * Pede o teste de bateria (`POST .../tests` → 202), com o `type` escolhido pela
-   * interface (padrão `duration_10s`). A API enfileira o
-   * pedido e só o executa no próximo ciclo do coletor; o acompanhamento é feito
-   * por `getBatteryTestReport`. Recusas da API (403/409/422/404/400) são
-   * repassadas com o MESMO HTTP e `error.code`, para a interface explicar o
-   * motivo real (ex.: `test_cooldown`, `unsupported_test_type`).
+   * Requests the battery test (`POST .../tests` → 202), with the `type` chosen by the
+   * interface (default `duration_10s`). The API queues the
+   * request and only runs it on the collector's next cycle; tracking is done
+   * by `getBatteryTestReport`. API refusals (403/409/422/404/400) are
+   * relayed with the SAME HTTP and `error.code`, so the interface can explain the
+   * real reason (e.g.: `test_cooldown`, `unsupported_test_type`).
    */
   async startBatteryTest(
     requestedDeviceId?: string | null,
@@ -259,7 +259,7 @@ export class ViewerService {
           viewer,
           error: {
             code: "no_devices_configured",
-            message: "nenhum equipamento disponível para o teste (configure UPS_DEVICE_ID)",
+            message: "no device available for the test (configure UPS_DEVICE_ID)",
           },
         },
       };
@@ -279,16 +279,16 @@ export class ViewerService {
           viewer,
           error: {
             code: "upstream_contract_mismatch",
-            message: parsed.problems.join("; ") || "aceite do teste fora do contrato",
+            message: parsed.problems.join("; ") || "test acceptance outside the contract",
           },
         },
       };
     }
-    // 202 como a API: o pedido foi aceito, não concluído.
+    // 202 like the API: the request was accepted, not completed.
     return { status: 202, body: { viewer, accept: parsed.value } };
   }
 
-  /** Acompanha o relatório (`GET .../tests/{test_id}`), parcial enquanto `running`. */
+  /** Tracks the report (`GET .../tests/{test_id}`), partial while `running`. */
   async getBatteryTestReport(
     testId: string,
     requestedDeviceId?: string | null,
@@ -301,7 +301,7 @@ export class ViewerService {
         status: 404,
         body: {
           viewer,
-          error: { code: "device_not_found", message: "equipamento não informado para consultar o teste" },
+          error: { code: "device_not_found", message: "device not provided to query the test" },
         },
       };
     }
@@ -320,7 +320,7 @@ export class ViewerService {
           viewer,
           error: {
             code: "upstream_contract_mismatch",
-            message: parsed.problems.join("; ") || "relatório do teste fora do contrato",
+            message: parsed.problems.join("; ") || "test report outside the contract",
           },
         },
       };
@@ -328,7 +328,7 @@ export class ViewerService {
     return { status: 200, body: { viewer, report: parsed.value } };
   }
 
-  /** Cancela um teste em andamento (`POST .../tests/{test_id}/abort` → 202). */
+  /** Cancels a test in progress (`POST .../tests/{test_id}/abort` → 202). */
   async abortBatteryTest(
     testId: string,
     requestedDeviceId?: string | null,
@@ -341,7 +341,7 @@ export class ViewerService {
         status: 404,
         body: {
           viewer,
-          error: { code: "device_not_found", message: "equipamento não informado para cancelar o teste" },
+          error: { code: "device_not_found", message: "device not provided to cancel the test" },
         },
       };
     }
@@ -360,7 +360,7 @@ export class ViewerService {
           viewer,
           error: {
             code: "upstream_contract_mismatch",
-            message: parsed.problems.join("; ") || "resposta de cancelamento fora do contrato",
+            message: parsed.problems.join("; ") || "cancellation response outside the contract",
           },
         },
       };
@@ -369,9 +369,9 @@ export class ViewerService {
   }
 
   /**
-   * Portão das ações de teste: devolve a resposta de falha (transporte ou
-   * envelope `error` da própria API) ou o `payload` utilizável. O HTTP e o
-   * `error.code` da API são preservados (ex.: 409 `test_cooldown`).
+   * Gate for the test actions: returns the failure response (transport or the API's
+   * own `error` envelope) or the usable `payload`. The HTTP and the
+   * API `error.code` are preserved (e.g.: 409 `test_cooldown`).
    */
   private actionFailure(
     result: UpstreamResult,
@@ -403,8 +403,8 @@ export class ViewerService {
   }
 
   /**
-   * Resolve o equipamento para uma ação de teste: `?device_id=` → `UPS_DEVICE_ID`
-   * → primeiro válido/primeiro de `GET /api/v1/ups`. Sem candidato, `null`.
+   * Resolves the device for a test action: `?device_id=` → `UPS_DEVICE_ID`
+   * → first valid/first of `GET /api/v1/ups`. With no candidate, `null`.
    */
   private async resolveActionDeviceId(requestedDeviceId: string | null): Promise<string | null> {
     if (requestedDeviceId && requestedDeviceId !== "") return requestedDeviceId;
@@ -444,7 +444,7 @@ export class ViewerService {
     }
     if (resolution.upstream) viewer.upstream = resolution.upstream;
 
-    // Sem identificador não há como consultar telemetria: estado degradado explícito.
+    // Without an identifier there is no way to query telemetry: explicit degraded state.
     if (!resolution.deviceId) {
       const failure = resolution.failure;
       const code: ViewerErrorCode =
@@ -461,7 +461,7 @@ export class ViewerService {
             code,
             message:
               failure?.message ??
-              "a API não informou nenhum equipamento em GET /api/v1/ups (configure UPS_DEVICE_ID para fixar o identificador)",
+              "the API reported no device in GET /api/v1/ups (configure UPS_DEVICE_ID to pin the identifier)",
           },
         },
       };
@@ -470,9 +470,9 @@ export class ViewerService {
     const [telemetryResult, identityResult, testsResult] = await Promise.all([
       this.fetch(TELEMETRY_PATH(resolution.deviceId), this.cacheTtlMs),
       this.fetch(IDENTITY_PATH(resolution.deviceId), this.identityTtlMs),
-      // Histórico do teste de bateria (contrato 3.0): alimenta a previsão de
-      // esgotamento/duração exibida pelo painel. Falha aqui NÃO derruba o
-      // dashboard — o status da consulta fica registrado em `viewer.sources.tests`.
+      // Battery test history (contract 3.0): feeds the runtime/depletion
+      // forecast shown by the panel. A failure here does NOT bring down the
+      // dashboard — the query status is recorded in `viewer.sources.tests`.
       this.fetch(`${TESTS_PATH(resolution.deviceId)}?limit=${TESTS_LIMIT}`, this.cacheTtlMs),
     ]);
 
@@ -485,7 +485,7 @@ export class ViewerService {
     let contractError: { code: string; message: string } | null = null;
 
     if (telemetryResult.ok) {
-      // A API responde erros com o mesmo envelope (`error.code`), inclusive 404/405.
+      // The API answers errors with the same envelope (`error.code`), including 404/405.
       const asError = parseErrorPayload(telemetryResult.payload);
       if (asError.ok) {
         contractError = asError.value.error;
@@ -525,9 +525,9 @@ export class ViewerService {
       }
     }
 
-    // Histórico do teste de bateria (contrato 3.0). É um extra do painel: quando a
-    // API não o expõe (404/erro), o status fica registrado em `viewer.sources.tests`
-    // sem virar aviso global — o painel do teste informa a ausência por conta própria.
+    // Battery test history (contract 3.0). It is an extra of the panel: when the
+    // API does not expose it (404/error), the status is recorded in `viewer.sources.tests`
+    // without becoming a global warning — the test panel reports the absence on its own.
     let tests: TestsListPayload | null = null;
     if (testsResult.ok) {
       const asError = parseErrorPayload(testsResult.payload);
@@ -549,14 +549,14 @@ export class ViewerService {
 
     viewer.warnings = [...new Set(viewer.warnings)];
 
-    // Caso feliz (200) e caso degradado da API (503 com telemetria ausente/desatualizada):
-    // ambos trazem informação válida para a interface, então respondemos 200 e deixamos
-    // `telemetry_valid`, `stale` e `communication.state` explicarem o estado real.
+    // Happy path (200) and degraded case of the API (503 with missing/stale telemetry):
+    // both carry valid information for the interface, so we answer 200 and let
+    // `telemetry_valid`, `stale` and `communication.state` explain the real state.
     if (telemetry) {
       return { status: 200, body: { viewer, health, devices, telemetry, identity, tests } };
     }
 
-    // Respostas de erro do próprio contrato da API (404/405 e afins).
+    // Error responses from the API contract itself (404/405 and the like).
     if (contractError) {
       const code: ViewerErrorCode =
         contractError.code === "device_not_found" ? "device_not_found" : "upstream_unexpected_status";
@@ -575,7 +575,7 @@ export class ViewerService {
       };
     }
 
-    // Respondeu JSON, mas fora do contrato esperado.
+    // Answered JSON, but outside the expected contract.
     const problems = viewer.sources.telemetry.warnings;
     return {
       status: 502,
@@ -583,22 +583,22 @@ export class ViewerService {
         viewer,
         error: {
           code: "upstream_contract_mismatch",
-          message: problems.join("; ") || `resposta de telemetria com HTTP ${telemetryResult.status} sem dados utilizáveis`,
+          message: problems.join("; ") || `telemetry response with HTTP ${telemetryResult.status} without usable data`,
         },
       },
     };
   }
 
   /**
-   * Decide QUAL equipamento alimenta o painel. A API unificada publica N
-   * equipamentos em `GET /api/v1/ups`; a escolha obedece, nesta ordem:
-   *   1. `?device_id=` da consulta (seleção explícita da interface);
-   *   2. `UPS_DEVICE_ID` fixado na configuração;
-   *   3. o primeiro equipamento da lista com `telemetry_valid: true`;
-   *   4. o primeiro item de `GET /api/v1/ups`;
-   *   5. o primeiro `device_id` de `/health` (quando a lista está vazia).
-   * Um `device_id` pedido que não consta da lista vira `device_not_found` —
-   * nunca é consultado às cegas nem substituído silenciosamente por outro.
+   * Decides WHICH device feeds the panel. The unified API publishes N
+   * devices in `GET /api/v1/ups`; the choice obeys, in this order:
+   *   1. `?device_id=` of the query (explicit selection of the interface);
+   *   2. `UPS_DEVICE_ID` set in the configuration;
+   *   3. the first device in the list with `telemetry_valid: true`;
+   *   4. the first item of `GET /api/v1/ups`;
+   *   5. the first `device_id` of `/health` (when the list is empty).
+   * A requested `device_id` that is not in the list becomes `device_not_found` —
+   * it is never queried blindly nor silently replaced by another.
    */
   private async resolveDeviceId(
     health: HealthPayload | null,
@@ -608,7 +608,7 @@ export class ViewerService {
     discovered: boolean;
     devices: DevicesPayload | null;
     deviceStatus: SourceStatus | null;
-    /** Estado do upstream quando a própria descoberta falhou (senão `null`). */
+    /** Upstream state when the discovery itself failed (otherwise `null`). */
     upstream: ViewerSection["upstream"] | null;
     failure: { code: ViewerErrorCode; message: string } | null;
   }> {
@@ -627,9 +627,9 @@ export class ViewerService {
     const result = await this.fetch("/api/v1/ups", this.identityTtlMs);
     let devices: DevicesPayload | null = null;
     const deviceStatus = this.sourceStatus(result);
-    // Sem equipamento descoberto não há consulta de telemetria; a falha de rede
-    // da descoberta precisa ficar registrada para a interface distinguir
-    // "API de telemetria indisponível" de "sem equipamento cadastrado".
+    // With no device discovered there is no telemetry query; the network failure
+    // of the discovery must be recorded so the interface can distinguish
+    // "telemetry API unavailable" from "no device registered".
     const upstream = result.ok ? null : this.upstreamStatus(result);
 
     if (result.ok) {
@@ -641,8 +641,8 @@ export class ViewerService {
 
     if (requested !== null) {
       const found = list.some((entry) => entry.device_id === requested);
-      // Lista indisponível (API fora do ar) → confia no pedido e deixa a própria
-      // consulta de telemetria revelar o erro real.
+      // List unavailable (API down) → trust the request and let the
+      // telemetry query itself reveal the real error.
       if (found || list.length === 0) {
         return { deviceId: requested, discovered: found, devices, deviceStatus, upstream, failure: null };
       }
@@ -655,19 +655,19 @@ export class ViewerService {
         upstream,
         failure: {
           code: "device_not_found",
-          message: `equipamento '${requested}' não consta em GET /api/v1/ups (disponíveis: ${available})`,
+          message: `device '${requested}' is not present in GET /api/v1/ups (available: ${available})`,
         },
       };
     }
 
-    // Prefere um equipamento com leitura válida agora (a interface pode ter
-    // selecionado outro dispositivo que está sem cabo).
+    // Prefers a device with a valid reading now (the interface may have
+    // selected another device that is without a cable).
     const preferred = list.find((entry) => entry.telemetry_valid === true) ?? list[0];
     if (preferred) {
       return { deviceId: preferred.device_id, discovered: true, devices, deviceStatus, upstream, failure: null };
     }
 
-    // Alternativa documentada: /health publica as chaves configuradas em `devices`.
+    // Documented alternative: /health publishes the configured keys in `devices`.
     const healthIds = health?.devices ? Object.keys(health.devices) : [];
     const firstFromHealth = healthIds[0];
     if (firstFromHealth) {
@@ -759,7 +759,7 @@ export class ViewerService {
     };
   }
 
-  /** GET com cache curto em memória + deduplicação de requisições simultâneas. */
+  /** GET with short in-memory cache + deduplication of concurrent requests. */
   private fetch(path: string, ttlMs: number): Promise<UpstreamResult> {
     const now = this.now();
     const cached = this.cache.get(path);
@@ -772,7 +772,7 @@ export class ViewerService {
     const request = this.client
       .get(path)
       .then((result) => {
-        // Falhas não são cacheadas: a interface volta ao normal assim que a API responde.
+        // Failures are not cached: the interface returns to normal as soon as the API responds.
         if (result.ok && ttlMs > 0) {
           this.cache.set(path, { expiresAt: this.now() + ttlMs, result });
         }

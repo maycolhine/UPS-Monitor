@@ -1,15 +1,15 @@
 /**
- * Cliente HTTP do frontend.
+ * Frontend HTTP client.
  *
- * O navegador conversa SOMENTE com o backend do próprio Web Viewer
- * (`/api/config` e `/api/dashboard`, na mesma origem). Quem fala com a API de
- * telemetria é o backend do container — isso elimina CORS e mantém o endereço
- * da API fora do navegador (escopo §7.1).
+ * The browser talks ONLY to the Web Viewer backend itself (`/api/config` and
+ * `/api/dashboard`, on the same origin). The one talking to the telemetry API is
+ * the container backend — this eliminates CORS and keeps the API address out of
+ * the browser (scope §7.1).
  *
- * A leitura é somente `GET`. A ÚNICA escrita admitida é o pedido de teste de
- * bateria do contrato 3.0 (`POST /api/tests...`), que o backend apenas repassa à
- * API de origem — o comando no nobreak continua sendo disparado por ela, nunca
- * pelo navegador nem de forma autônoma.
+ * Reading is `GET` only. The ONLY write allowed is the battery test request of
+ * contract 3.0 (`POST /api/tests...`), which the backend merely forwards to the
+ * origin API — the command on the UPS is still triggered by it, never by the
+ * browser nor autonomously.
  */
 import type {
   BatteryTestAbortPayload,
@@ -32,9 +32,9 @@ interface RequestOptions {
   body?: unknown;
   signal?: AbortSignal;
   /**
-   * `GET /api/dashboard` responde 503 com payload de telemetria utilizável; nesse
-   * caso o corpo ainda vale e `ok` permanece verdadeiro. As ações do teste não
-   * têm esse tratamento: 403/409/422 são falhas que a interface precisa mostrar.
+   * `GET /api/dashboard` responds 503 with a usable telemetry payload; in that
+   * case the body is still valid and `ok` remains true. The test actions do not
+   * get this treatment: 403/409/422 are failures the interface must show.
    */
   degradedOk?: boolean;
 }
@@ -54,7 +54,7 @@ async function requestJson<T>(path: string, options: RequestOptions): Promise<Ap
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      return { ok: false, status: 0, data: null, error: { code: "aborted", message: "Consulta cancelada." } };
+      return { ok: false, status: 0, data: null, error: { code: "aborted", message: "Request cancelled." } };
     }
     return {
       ok: false,
@@ -62,7 +62,7 @@ async function requestJson<T>(path: string, options: RequestOptions): Promise<Ap
       data: null,
       error: {
         code: "network_error",
-        message: "Não foi possível falar com o serviço do Web Viewer (mesma origem).",
+        message: "Could not reach the Web Viewer service (same origin).",
       },
     };
   }
@@ -77,7 +77,7 @@ async function requestJson<T>(path: string, options: RequestOptions): Promise<Ap
       data: null,
       error: {
         code: "invalid_json",
-        message: `O serviço respondeu HTTP ${response.status} sem JSON válido.`,
+        message: `The service responded HTTP ${response.status} without valid JSON.`,
       },
     };
   }
@@ -87,7 +87,7 @@ async function requestJson<T>(path: string, options: RequestOptions): Promise<Ap
       ok: false,
       status: response.status,
       data: null,
-      error: { code: "invalid_json", message: "Resposta em formato inesperado." },
+      error: { code: "invalid_json", message: "Unexpected response format." },
     };
   }
 
@@ -95,7 +95,7 @@ async function requestJson<T>(path: string, options: RequestOptions): Promise<Ap
     const envelope = payload as Partial<ViewerErrorPayload>;
     const code = envelope.error?.code ?? `http_${response.status}`;
     const message =
-      envelope.error?.message ?? `O serviço respondeu HTTP ${response.status}.`;
+      envelope.error?.message ?? `The service responded HTTP ${response.status}.`;
     return {
       ok: degradedOk && response.status === 503,
       status: response.status,
@@ -107,18 +107,18 @@ async function requestJson<T>(path: string, options: RequestOptions): Promise<Ap
   return { ok: true, status: response.status, data: payload as T, error: null };
 }
 
-/** `GET /api/config` — definição dos gauges e parâmetros de atualização. */
+/** `GET /api/config` — gauge definitions and refresh parameters. */
 export function fetchConfig(signal?: AbortSignal): Promise<ApiResult<ViewerConfigPayload>> {
   return requestJson<ViewerConfigPayload>("/api/config", { method: "GET", signal });
 }
 
 /**
- * `GET /api/dashboard` — instantâneo validado da API de telemetria.
+ * `GET /api/dashboard` — validated snapshot of the telemetry API.
  *
- * `deviceId` (opcional) escolhe qual nobreak exibir; sem ele o backend decide
- * (variável de ambiente, primeiro válido ou primeiro da lista). Em HTTP 503 o
- * corpo ainda é útil (payload com estado degradado), por isso `ok` continua
- * verdadeiro e o estado é derivado do próprio conteúdo.
+ * `deviceId` (optional) selects which UPS to display; without it the backend
+ * decides (environment variable, first valid or first in the list). On HTTP 503
+ * the body is still useful (payload with degraded state), so `ok` remains true
+ * and the state is derived from the content itself.
  */
 export function fetchDashboard(
   deviceId?: string | null,
@@ -131,20 +131,21 @@ export function fetchDashboard(
   });
 }
 
-// ------------------------- ações do teste de bateria ------------------------
+// ------------------------- battery test actions ------------------------
 
 function deviceQuery(deviceId?: string | null): string {
   return deviceId ? `?device_id=${encodeURIComponent(deviceId)}` : "";
 }
 
 /**
- * `POST /api/tests` — pede o teste de bateria ao nobreak selecionado.
+ * `POST /api/tests` — requests the battery test from the selected UPS.
  *
- * `type` é o tipo declarado em `capabilities.battery_test.test_types`
- * (`duration_10s` ou `discharge_20pct`): quem decide o que oferecer é a API, não
- * o protocolo. O `POST` é ASSÍNCRONO: a resposta `202` traz o `test_id` e o
- * `report_url`, e não o resultado. Quem executa o comando é a API de origem, no
- * próximo ciclo do coletor — o Web Viewer nunca dispara teste por conta própria.
+ * `type` is the type declared in `capabilities.battery_test.test_types`
+ * (`duration_10s` or `discharge_20pct`): the one deciding what to offer is the
+ * API, not the protocol. The `POST` is ASYNCHRONOUS: the `202` response carries
+ * the `test_id` and the `report_url`, not the result. The one executing the
+ * command is the origin API, on the next cycle of the collector — the Web Viewer
+ * never triggers a test on its own.
  */
 export function startBatteryTest(
   deviceId?: string | null,
@@ -158,7 +159,7 @@ export function startBatteryTest(
   });
 }
 
-/** `GET /api/tests/{id}` — acompanha o relatório (parcial enquanto `running`). */
+/** `GET /api/tests/{id}` — follows the report (partial while `running`). */
 export function fetchBatteryTestReport(
   testId: string,
   deviceId?: string | null,
@@ -171,10 +172,10 @@ export function fetchBatteryTestReport(
 }
 
 /**
- * `POST /api/tests/{id}/abort` — cancela o teste em andamento.
+ * `POST /api/tests/{id}/abort` — cancels the test in progress.
  *
- * Só aparece na interface quando `capabilities.battery_test.abort_supported` é
- * verdadeiro; no `megatec-q1` o cancelamento apenas interrompe a amostragem.
+ * It only appears in the interface when `capabilities.battery_test.abort_supported`
+ * is true; on `megatec-q1` the cancellation merely stops the sampling.
  */
 export function abortBatteryTest(
   testId: string,
@@ -188,10 +189,10 @@ export function abortBatteryTest(
 }
 
 /**
- * Distingue a falha do PRÓPRIO serviço do Web Viewer (transporte ou JSON
- * ilegível) de um envelope de erro que descreve a API de origem (`502`/`404`
- * com `error.code`). Só o primeiro caso deve ser tratado como "serviço
- * inacessível"; o segundo é apresentado a partir do próprio payload.
+ * Distinguishes a failure of the Web Viewer service ITSELF (transport or
+ * unreadable JSON) from an error envelope describing the origin API (`502`/`404`
+ * with `error.code`). Only the first case should be treated as "service
+ * unreachable"; the second is presented from the payload itself.
  */
 export function isViewerLevelFailure(result: ApiResult<unknown>): boolean {
   if (result.error === null) return false;

@@ -1,34 +1,35 @@
 ---
-description: Arquitetura, stack e organização de código do Web Viewer
+description: Architecture, stack and code organization of the Web Viewer
 globs:
 alwaysApply: true
 ---
 
-# 10 — Arquitetura
+# 10 — Architecture
 
-Referência completa: [docs/arquitetura.md](../../docs/arquitetura.md).
+Full reference: [docs/architecture.md](../../docs/architecture.md).
 
 ## Stack
 
-| Camada | Tecnologia |
+| Layer | Technology |
 |---|---|
-| Backend (proxy de leitura + servidor) | Node.js 20 + Express + TypeScript (ESM) |
+| Backend (read proxy + server) | Node.js 20 + Express + TypeScript (ESM) |
 | Frontend | React 18 + TypeScript + Vite |
-| Gauges | SVG próprio (sem biblioteca de gráficos) |
-| Testes | Vitest (backend e frontend) |
-| Organização | npm workspaces (`src/backend`, `src/frontend`) |
-| Empacotamento | Docker multi-stage; o backend serve a interface estática |
+| Gauges | Custom SVG (no chart library) |
+| Tests | Vitest (backend and frontend) |
+| Organization | npm workspaces (`src/backend`, `src/frontend`) |
+| Packaging | Multi-stage Docker; the backend serves the static interface |
 
-## Fluxo
+## Flow
 
 ```
-navegador → backend do Web Viewer (/api/dashboard) → API de telemetria (HTTP GET)
+browser → Web Viewer backend (/api/dashboard) → telemetry API (HTTP GET)
 ```
 
-O navegador fala **somente** com o próprio backend, na mesma origem. Isso elimina CORS e mantém o
-endereço da API fora do navegador. O backend só consulta e repassa: não coleta, não persiste.
+The browser talks **only** to its own backend, on the same origin. This eliminates CORS and keeps the
+API address out of the browser. The backend only queries and forwards: it does not collect, it does not
+persist.
 
-## Estrutura
+## Structure
 
 ```
 src/backend/src/     config.ts, logger.ts, apiClient.ts, contract.ts,
@@ -38,15 +39,15 @@ src/frontend/src/    api/, components/, demo/, hooks/, model/, styles/
 src/frontend/tests/  metrics, status, notices, client, batteryTest
 ```
 
-## Regras de código
+## Code rules
 
-1. **Separação de camadas**: consulta HTTP (`apiClient`), contrato (`contract`), orquestração
-   (`dashboard`), transporte HTTP (`server`), configuração (`config`). A interface não conhece a API.
-2. **Sem IP, host ou `device_id` fixos no código.** Tudo vem de variáveis de ambiente.
-3. **Sem persistência e sem banco de dados.**
-4. **Dependências enxutas**: qualquer biblioteca nova precisa de justificativa registrada em
-   [docs/decisoes-tecnicas.md](../../docs/decisoes-tecnicas.md).
-5. **Comentários em português**, explicando o "porquê" (as decisões do escopo), não o "o quê".
-6. **`strict` + `noUncheckedIndexedAccess`** estão ligados: trate índices possivelmente indefinidos.
-7. Importações relativas entre módulos TS usam a extensão `.js` (padrão ESM do projeto).
-8. O healthcheck do container (`GET /healthz`) **não** deve depender da API de telemetria.
+1. **Layer separation**: HTTP query (`apiClient`), contract (`contract`), orchestration (`dashboard`),
+   HTTP transport (`server`), configuration (`config`). The interface does not know the API.
+2. **No fixed IP, host or `device_id` in the code.** Everything comes from environment variables.
+3. **No persistence and no database.**
+4. **Lean dependencies**: any new library needs a recorded justification in
+   [docs/technical-decisions.md](../../docs/technical-decisions.md).
+5. **Comments in English**, explaining the "why" (the scope decisions), not the "what".
+6. **`strict` + `noUncheckedIndexedAccess`** are on: handle possibly undefined indices.
+7. Relative imports between TS modules use the `.js` extension (the project's ESM convention).
+8. The container healthcheck (`GET /healthz`) **must not** depend on the telemetry API.

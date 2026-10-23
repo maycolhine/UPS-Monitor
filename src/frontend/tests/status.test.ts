@@ -62,14 +62,14 @@ function dashboard(upstreamError: { code: string; message: string } | null): Das
   };
 }
 
-describe("flags Q1", () => {
-  it("marca como ativas apenas as flags informadas", () => {
+describe("Q1 flags", () => {
+  it("marks only the reported flags as active", () => {
     const views = buildFlagViews(
       { OB: false, LB: false, STANDBY: true, BEEP: true },
       ["STANDBY", "BEEP"],
     );
-    // A ordem da grade é fixa (frias → quentes), não a ordem do array de ativas:
-    // o teste verifica quais flags ficaram ativas, não a posição delas.
+    // The grid order is fixed (cold → hot), not the order of the active array:
+    // the test checks which flags are active, not their position.
     expect(
       views
         .filter((view) => view.active)
@@ -79,26 +79,26 @@ describe("flags Q1", () => {
     expect(views.find((view) => view.id === "OB")?.active).toBe(false);
   });
 
-  it("marca bateria baixa e falha como críticas", () => {
+  it("marks low battery and fault as critical", () => {
     const views = buildFlagViews(undefined, ["LB", "FAULT"]);
     expect(views.find((view) => view.id === "LB")?.severity).toBe("critical");
     expect(views.find((view) => view.id === "FAULT")?.severity).toBe("critical");
   });
 
-  it("lista flags não documentadas (outros modelos) sem inventar rótulo", () => {
+  it("lists undocumented flags (other models) without inventing a label", () => {
     const unknown = buildUnknownFlagViews({ XYZ: true }, ["XYZ"]);
     expect(unknown).toHaveLength(1);
     expect(unknown[0]?.id).toBe("XYZ");
-    expect(unknown[0]?.description).toContain("não documentado");
+    expect(unknown[0]?.description).toContain("not documented");
   });
 
-  it("não classifica nenhuma flag como ativa quando o status não traz flags", () => {
+  it("does not classify any flag as active when the status brings no flags", () => {
     expect(buildFlagViews(undefined, undefined).every((view) => !view.active)).toBe(true);
   });
 });
 
-describe("flags por protocolo (contrato 2.0)", () => {
-  it("usa a tabela do sms-1phase quando data.source é sms-1phase", () => {
+describe("flags per protocol (contract 2.0)", () => {
+  it("uses the sms-1phase table when data.source is sms-1phase", () => {
     const views = buildFlagViews(
       { BYPASS: true, UPSOK: true, BEEP: true },
       ["BYPASS", "UPSOK", "BEEP"],
@@ -107,12 +107,12 @@ describe("flags por protocolo (contrato 2.0)", () => {
     const ids = views.map((view) => view.id);
     expect(ids).toContain("BYPASS");
     expect(ids).toContain("UPSOK");
-    // O SMS não publica FAULT/STANDBY (esses bits têm outro significado nele).
+    // The SMS does not publish FAULT/STANDBY (those bits have another meaning in it).
     expect(ids).not.toContain("FAULT");
     expect(views.find((view) => view.id === "BYPASS")?.active).toBe(true);
   });
 
-  it("não lista BYPASS/UPSOK como 'não documentadas' no SMS", () => {
+  it("does not list BYPASS/UPSOK as 'undocumented' in the SMS", () => {
     const unknown = buildUnknownFlagViews(
       { BYPASS: true, UPSOK: true },
       ["BYPASS", "UPSOK"],
@@ -121,70 +121,70 @@ describe("flags por protocolo (contrato 2.0)", () => {
     expect(unknown).toEqual([]);
   });
 
-  it("mantém a tabela do Q1 para protocolo ausente ou desconhecido", () => {
+  it("keeps the Q1 table for a missing or unknown protocol", () => {
     expect(buildFlagViews(undefined, ["FAULT"]).map((view) => view.id)).toContain("FAULT");
     const unknown = buildUnknownFlagViews({ BYPASS: true }, ["BYPASS"]);
     expect(unknown.map((view) => view.id)).toContain("BYPASS");
   });
 });
 
-describe("estado de comunicação", () => {
-  it("traduz os estados documentados", () => {
-    expect(describeCommunicationState("ok").label).toBe("Conectado");
-    expect(describeCommunicationState("stale").label).toBe("Desatualizado");
-    expect(describeCommunicationState("permission_denied").label).toBe("Sem permissão");
+describe("communication state", () => {
+  it("translates the documented states", () => {
+    expect(describeCommunicationState("ok").label).toBe("Connected");
+    expect(describeCommunicationState("stale").label).toBe("Stale");
+    expect(describeCommunicationState("permission_denied").label).toBe("Permission denied");
   });
 
-  it("traduz o estado novo checksum_error (protocolo SMS)", () => {
-    expect(describeCommunicationState("checksum_error").label).toBe("Quadro corrompido");
+  it("translates the new checksum_error state (SMS protocol)", () => {
+    expect(describeCommunicationState("checksum_error").label).toBe("Corrupted frame");
     expect(communicationLevel("checksum_error")).toBe("down");
   });
 
-  it("não inventa rótulo para estado desconhecido", () => {
+  it("does not invent a label for an unknown state", () => {
     expect(describeCommunicationState("estado_novo").label).toBe("estado_novo");
   });
 
-  it("mapeia a severidade do estado", () => {
+  it("maps the severity of the state", () => {
     expect(communicationLevel("ok")).toBe("ok");
     expect(communicationLevel("stale")).toBe("stale");
     expect(communicationLevel("starting")).toBe("warning");
     expect(communicationLevel("timeout")).toBe("down");
   });
 
-  it("distingue API indisponível de telemetria desatualizada", () => {
-    const unreachable = describeCommunication(null, dashboard({ code: "upstream_unreachable", message: "sem rota" }));
+  it("distinguishes an unavailable API from stale telemetry", () => {
+    const unreachable = describeCommunication(null, dashboard({ code: "upstream_unreachable", message: "no route" }));
     expect(unreachable.level).toBe("down");
-    expect(unreachable.label).toContain("Sem comunicação");
+    expect(unreachable.label).toContain("No communication");
 
     const stale = describeCommunication(telemetry({ stale: true }), dashboard(null));
     expect(stale.level).toBe("stale");
-    expect(stale.label).toBe("Desatualizado");
-    expect(stale.description).toContain("desatualizada");
+    expect(stale.label).toBe("Stale");
+    expect(stale.description).toContain("stale");
   });
 
-  it("indica conectado quando a leitura é válida e recente", () => {
+  it("indicates connected when the reading is valid and recent", () => {
     const view = describeCommunication(telemetry(), dashboard(null));
     expect(view.level).toBe("ok");
-    expect(view.label).toBe("Conectado");
+    expect(view.label).toBe("Connected");
   });
 
-  it("trata ausência de telemetria sem erro de transporte", () => {
+  it("handles the absence of telemetry without a transport error", () => {
     const view = describeCommunication(null, dashboard(null));
     expect(view.level).toBe("down");
-    expect(view.label).toBe("Sem dados do equipamento");
+    expect(view.label).toBe("No data from the device");
   });
 
-  it("marca como atenção quando a coleta está ativa mas sem leitura válida", () => {
+  it("marks as warning when collection is active but there is no valid reading", () => {
     const view = describeCommunication(telemetry({ data_available: false }), dashboard(null));
     expect(view.level).toBe("warning");
   });
 
-  it("propaga o estado de falha do coletor", () => {
+  it("propagates the collector failure state", () => {
     const view = describeCommunication(
       telemetry({ communication: { state: "permission_denied" } }),
       dashboard(null),
     );
     expect(view.level).toBe("down");
-    expect(view.label).toBe("Sem permissão");
+    expect(view.label).toBe("Permission denied");
   });
 });

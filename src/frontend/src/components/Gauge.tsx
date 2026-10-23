@@ -1,10 +1,10 @@
 /**
- * Gauge semicircular em SVG (sem biblioteca de gráficos).
+ * Semicircular gauge in SVG (no chart library).
  *
- * Mostra: faixas semânticas (vermelho/âmbar/verde), escala com marcações,
- * ponteiro, valor central com unidade e o estado textual da métrica.
- * A cor nunca é o único sinal — sempre acompanha valor e rótulo textual
- * (escopo §4.2 e §6).
+ * Shows: semantic bands (red/amber/green), scale with marks, needle, central
+ * value with unit and the textual state of the metric.
+ * Color is never the only signal — it always accompanies the value and the
+ * textual label (scope §4.2 and §6).
  */
 import { formatNumber } from "../model/format.js";
 import type { GaugeRenderModel } from "../model/metrics.js";
@@ -48,7 +48,7 @@ export function Gauge({ model }: GaugeProps) {
   const originNote = model.source?.origin_note ?? null;
   const showOriginNote =
     originNote !== null &&
-    !(definition.id === "battery_charge_percent" && originNote === "informada pelo equipamento");
+    !(definition.id === "battery_charge_percent" && originNote === "reported by the device");
 
   const needle =
     model.hasValue && model.value !== null
@@ -64,7 +64,7 @@ export function Gauge({ model }: GaugeProps) {
         aria-hidden="true"
         focusable="false"
       >
-        {/* Trilha neutra de fundo */}
+        {/* Neutral background track */}
         <path
           className="gauge__track"
           d={arcPath(min, max, definition.scale, GEOMETRY)}
@@ -72,7 +72,7 @@ export function Gauge({ model }: GaugeProps) {
           fill="none"
         />
 
-        {/* Faixas semânticas */}
+        {/* Semantic bands */}
         <g className="gauge__bands">
           {definition.bands.map((band) => (
             <path
@@ -85,7 +85,7 @@ export function Gauge({ model }: GaugeProps) {
           ))}
         </g>
 
-        {/* Limites das faixas: marca onde cada faixa começa e termina */}
+        {/* Band limits: marks where each band starts and ends */}
         <g className="gauge__ticks">
           {bandBoundaries(definition.bands).map((boundary) => {
             const angle = valueAngle(boundary, min, max);
@@ -109,7 +109,7 @@ export function Gauge({ model }: GaugeProps) {
           })}
         </g>
 
-        {/* Ponteiro */}
+        {/* Needle */}
         {needle ? (
           <g className="gauge__needle-group">
             <line
@@ -123,7 +123,7 @@ export function Gauge({ model }: GaugeProps) {
           </g>
         ) : null}
 
-        {/* Valor central */}
+        {/* Central value */}
         <text className="gauge__value" x={GEOMETRY.cx} y={GEOMETRY.cy - 24} textAnchor="middle">
           {model.displayValue}
         </text>

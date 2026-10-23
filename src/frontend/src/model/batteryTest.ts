@@ -1,22 +1,23 @@
 /**
- * Modelo (puro) do teste de bateria do contrato 3.0.
+ * (Pure) model of the battery test of contract 3.0.
  *
- * O contrato publica DOIS tipos de teste: `duration_10s` (janela fixa, em todos
- * os protocolos com teste) e `discharge_20pct` (sem janela: roda até a carga cair
- * ao alvo de 20 % ou até o teto de segurança de 30 min, só onde o equipamento
- * sabe cancelar). O seletor da interface é restrito a `test_types`.
+ * The contract publishes TWO test types: `duration_10s` (fixed window, in all
+ * protocols with test) and `discharge_20pct` (no window: it runs until the
+ * charge drops to the target of 20 % or until the safety ceiling of 30 min, only
+ * where the device knows how to cancel). The interface selector is restricted to
+ * `test_types`.
  *
- * Regra de ouro: a API entrega os FATOS (série, agregações e a extrapolação
- * linear de 1ª ordem marcada `confidence: "low"`); o Web Viewer apenas
- * APRESENTA. Nenhum número é inventado aqui — quando `estimate.available` é
- * falso, o painel mostra o `reason` informado pela API, nunca uma autonomia.
+ * Golden rule: the API delivers the FACTS (series, aggregations and the
+ * first-order linear extrapolation marked `confidence: "low"`); the Web Viewer
+ * only PRESENTS them. No number is invented here — when `estimate.available` is
+ * false, the panel shows the `reason` reported by the API, never a runtime.
  *
- * Os gráficos são desenhados a partir de `samples[].normalized` (o espelho
- * padronizado entre protocolos): chave AUSENTE significa "série indisponível" e
- * NUNCA vira zero.
+ * The charts are drawn from `samples[].normalized` (the standardized mirror
+ * across protocols): an ABSENT key means "series unavailable" and NEVER becomes
+ * zero.
  *
- * Todas as funções são puras para serem testáveis sem DOM, conforme a regra
- * 40-testing-and-docker do projeto.
+ * All functions are pure so they can be tested without a DOM, per the project's
+ * 40-testing-and-docker rule.
  */
 import { formatAge, formatNumber, MISSING_TEXT } from "./format.js";
 import type {
@@ -41,12 +42,12 @@ export function testPhase(status: string | null | undefined): TestPhase {
 }
 
 const STATUS_TEXT: Record<string, string> = {
-  running: "Em andamento",
-  aborting: "Cancelando",
-  completed: "Concluído",
-  aborted: "Cancelado",
-  failed: "Falhou",
-  accepted: "Aceito (na fila do coletor)",
+  running: "Running",
+  aborting: "Aborting",
+  completed: "Completed",
+  aborted: "Aborted",
+  failed: "Failed",
+  accepted: "Accepted (in the collector queue)",
 };
 
 export function describeTestStatus(status: string | null | undefined): string {
@@ -55,19 +56,19 @@ export function describeTestStatus(status: string | null | undefined): string {
 }
 
 /**
- * Motivo do encerramento. Diferente de `duration_elapsed`, a janela foi
- * atípica (cancelada, bateria baixa, watchdog) e o relatório não deve ser
- * tratado como um teste normal.
+ * Reason for the termination. Unlike `duration_elapsed`, the window was atypical
+ * (cancelled, low battery, watchdog) and the report should not be treated as a
+ * normal test.
  */
 const FINISH_REASON_TEXT: Record<string, string> = {
-  duration_elapsed: "Janela completa do teste",
-  target_percent_reached: "Carga da bateria atingiu o alvo do teste",
-  test_flag_cleared: "O equipamento encerrou a flag de teste antes do tempo",
-  aborted: "Cancelado durante a execução",
-  battery_low: "Interrompido: bateria baixa (flag LB)",
-  watchdog: "Interrompido pelo teto de tempo do coletor",
-  stopping: "Interrompido: o serviço foi encerrado",
-  serial_error: "Interrompido por erro na porta serial",
+  duration_elapsed: "Full test window",
+  target_percent_reached: "Battery charge reached the test target",
+  test_flag_cleared: "The device cleared the test flag before the time",
+  aborted: "Cancelled during execution",
+  battery_low: "Interrupted: low battery (LB flag)",
+  watchdog: "Interrupted by the collector time ceiling",
+  stopping: "Interrupted: the service was shut down",
+  serial_error: "Interrupted by a serial port error",
 };
 
 export function describeFinishReason(reason: string | null | undefined): string {
@@ -76,27 +77,27 @@ export function describeFinishReason(reason: string | null | undefined): string 
 }
 
 /**
- * Mensagens de apoio para os códigos de erro do teste (§11.4 da doc de
- * integração). A API já devolve `message` em português pronto para exibir; este
- * mapa é apenas o fallback quando o envelope vier sem mensagem.
+ * Supporting messages for the test error codes (§11.4 of the integration doc).
+ * The API already returns `message` ready to display; this map is only the
+ * fallback when the envelope comes without a message.
  */
 const TEST_ERROR_TEXT: Record<string, string> = {
-  test_disabled: "Teste de bateria não habilitado neste equipamento.",
-  test_cooldown: "Aguarde alguns minutos entre testes (cooldown).",
-  battery_too_low: "Carga da bateria abaixo do mínimo seguro para teste.",
-  battery_at_target: "A carga da bateria já está no alvo deste teste.",
-  on_battery: "O nobreak já está na bateria — teste não permitido.",
-  battery_low: "Bateria baixa (flag LB) — teste não permitido.",
-  test_in_progress: "Já existe um teste em andamento neste equipamento.",
-  test_unavailable: "Sem telemetria fresca — verifique a comunicação do equipamento.",
-  test_not_running: "Este teste já terminou.",
-  unsupported_test_type: "Tipo de teste indisponível neste equipamento.",
-  test_not_supported: "Este equipamento não suporta o teste de bateria.",
+  test_disabled: "Battery test is not enabled on this device.",
+  test_cooldown: "Wait a few minutes between tests (cooldown).",
+  battery_too_low: "Battery charge below the minimum safe for testing.",
+  battery_at_target: "The battery charge is already at the target of this test.",
+  on_battery: "The UPS is already on battery — test not allowed.",
+  battery_low: "Low battery (LB flag) — test not allowed.",
+  test_in_progress: "There is already a test in progress on this device.",
+  test_unavailable: "No fresh telemetry — check the device communication.",
+  test_not_running: "This test has already ended.",
+  unsupported_test_type: "Test type unavailable on this device.",
+  test_not_supported: "This device does not support the battery test.",
   test_requires_battery_percent:
-    "Este tipo de teste exige que o equipamento informe o percentual da bateria.",
-  device_not_found: "Equipamento não encontrado na API de telemetria.",
-  test_not_found: "Teste não encontrado na API de telemetria.",
-  invalid_request: "Requisição de teste malformada.",
+    "This test type requires the device to report the battery percentage.",
+  device_not_found: "Device not found in the telemetry API.",
+  test_not_found: "Test not found in the telemetry API.",
+  invalid_request: "Malformed test request.",
 };
 
 export function describeTestError(
@@ -106,28 +107,28 @@ export function describeTestError(
   const known = TEST_ERROR_TEXT[error.code];
   const message = error.message?.trim() ?? "";
   if (known) return message === "" || message === known ? known : message;
-  return message === "" ? `Falha no teste (${error.code}).` : message;
+  return message === "" ? `Test failure (${error.code}).` : message;
 }
 
-// --------------------------------------------------------------- capacidades ---
+// --------------------------------------------------------------- capabilities ---
 
 export interface BatteryTestSupport {
-  /** A API declarou o teste como suportado. */
+  /** The API declared the test as supported. */
   supported: boolean;
-  /** `enabled` decide se o botão pode ser acionado (contrato §11.1). */
+  /** `enabled` decides whether the button can be triggered (contract §11.1). */
   enabled: boolean;
   abortSupported: boolean;
   durationS: number | null;
   sampleIntervalS: number | null;
   cooldownS: number | null;
   minBatteryPercent: number | null;
-  /** Tipos aceitos por ESTE equipamento — o seletor nunca oferece outro. */
+  /** Types accepted by THIS device — the selector never offers another. */
   testTypes: string[];
-  /** Parâmetros por tipo (`types.<type>`): janela × alvo. */
+  /** Parameters per type (`types.<type>`): window × target. */
   types: Record<string, BatteryTestTypeParams>;
 }
 
-/** Lê `capabilities.battery_test` do dispositivo descoberto em `GET /api/v1/ups`. */
+/** Reads `capabilities.battery_test` of the device discovered in `GET /api/v1/ups`. */
 export function readTestSupport(
   capabilities: DeviceCapabilities | undefined | null,
 ): BatteryTestSupport {
@@ -145,37 +146,37 @@ export function readTestSupport(
   };
 }
 
-/** Avisos mostrados ANTES do clique, para evitar os 409 de guarda. */
+/** Warnings shown BEFORE the click, to avoid the guard 409s. */
 export function buildTestGuards(support: BatteryTestSupport): string[] {
   const guards: string[] = [];
   if (support.cooldownS !== null && support.cooldownS > 0) {
-    guards.push(`Espera de ${formatAge(support.cooldownS)} entre dois testes.`);
+    guards.push(`Wait of ${formatAge(support.cooldownS)} between two tests.`);
   }
   if (support.minBatteryPercent !== null) {
     guards.push(
-      `Requer carga da bateria de pelo menos ${formatNumber(support.minBatteryPercent, 0)}%.`,
+      `Requires battery charge of at least ${formatNumber(support.minBatteryPercent, 0)}%.`,
     );
   }
   if (!support.abortSupported) {
-    guards.push("Este equipamento não cancela o teste: o cancelamento apenas para a amostragem.");
+    guards.push("This device does not cancel the test: cancellation only stops the sampling.");
   }
   return guards;
 }
 
-// ---------------------------------------------------------- tipos de teste ---
+// ---------------------------------------------------------- test types ---
 
-/** Rótulos sugeridos pela doc do quadrante (§3.1), por `type` do contrato. */
+/** Labels suggested by the quadrant doc (§3.1), per contract `type`. */
 const TEST_TYPE_LABEL: Record<string, string> = {
-  duration_10s: "Teste rápido (~10 s)",
-  discharge_20pct: "Descarga controlada (até 20 %)",
+  duration_10s: "Quick test (~10 s)",
+  discharge_20pct: "Controlled discharge (up to 20 %)",
 };
 
 export interface TestTypeOption {
   type: string;
   label: string;
-  /** Parâmetros publicados em `types.<type>`; `null` quando a API não os envia. */
+  /** Parameters published in `types.<type>`; `null` when the API does not send them. */
   params: BatteryTestTypeParams | null;
-  /** `true` no teste de descarga por alvo (sem janela). */
+  /** `true` in the target discharge test (no window). */
   isTarget: boolean;
 }
 
@@ -185,9 +186,9 @@ export function describeTestType(type: string | null | undefined): string {
 }
 
 /**
- * Um teste é "por alvo" quando declara `target_percent` sem janela. Sem o
- * detalhe em `types`, o próprio nome do tipo decide — nunca inventamos
- * parâmetros que a API não publicou.
+ * A test is "by target" when it declares `target_percent` without a window.
+ * Without the detail in `types`, the type name itself decides — we never invent
+ * parameters the API did not publish.
  */
 function isTargetType(type: string, params: BatteryTestTypeParams | null): boolean {
   if (params?.target_percent != null) return true;
@@ -196,9 +197,9 @@ function isTargetType(type: string, params: BatteryTestTypeParams | null): boole
 }
 
 /**
- * Opções do seletor: SOMENTE os tipos declarados em `test_types` — oferecer um
- * tipo fora da lista só produziria `422 unsupported_test_type` (ex.: o
- * `discharge_20pct` no `megatec-q1`).
+ * Selector options: ONLY the types declared in `test_types` — offering a type
+ * outside the list would only produce `422 unsupported_test_type` (e.g., the
+ * `discharge_20pct` on `megatec-q1`).
  */
 export function buildTestTypeOptions(support: BatteryTestSupport): TestTypeOption[] {
   return support.testTypes.map((type) => {
@@ -213,41 +214,42 @@ export function buildTestTypeOptions(support: BatteryTestSupport): TestTypeOptio
 }
 
 /**
- * Rótulo curto do teste escolhido: "Janela de 10,0 s" (teste de janela) ou
- * "Descarga até 20 %" (teste por alvo). Sem `types`, cai no nome do tipo.
+ * Short label of the chosen test: "Window of 10.0 s" (window test) or
+ * "Discharge to 20 %" (target test). Without `types`, it falls back to the type
+ * name.
  */
 export function describeTestTypeParams(option: TestTypeOption | null): string {
   if (!option) return MISSING_TEXT;
   if (option.isTarget) {
     const target = option.params?.target_percent;
-    return target == null ? "Descarga até o alvo" : `Descarga até ${formatNumber(target, 0)}%`;
+    return target == null ? "Discharge to the target" : `Discharge to ${formatNumber(target, 0)}%`;
   }
   const duration = option.params?.duration_s;
-  return duration == null ? "Janela fixa" : `Janela de ${formatNumber(duration, 1)} s`;
+  return duration == null ? "Fixed window" : `Window of ${formatNumber(duration, 1)} s`;
 }
 
-// ----------------------------------------------------------------- estimativa ---
+// ----------------------------------------------------------------- estimate ---
 
 export interface EstimateView {
   available: boolean;
-  /** "2 min 12 s", "≥ 10 h (extrapolação)" ou o traço quando indisponível. */
+  /** "2 min 12 s", "≥ 10 h (extrapolation)" or the dash when unavailable. */
   runtimeText: string;
-  /** Observação curta sobre como o número foi obtido. */
+  /** Short note about how the number was obtained. */
   note: string;
   dischargeRateText: string;
   dropText: string;
 }
 
 /**
- * Traduz `estimate`. Quando `available` é falso, só o `reason` é exibido — a
- * interface nunca converte a ausência em número.
+ * Translates `estimate`. When `available` is false, only the `reason` is
+ * displayed — the interface never converts the absence into a number.
  */
 export function buildEstimateView(estimate: BatteryTestEstimate | null | undefined): EstimateView {
   if (!estimate) {
     return {
       available: false,
       runtimeText: MISSING_TEXT,
-      note: "Sem estimativa nesta leitura.",
+      note: "No estimate in this reading.",
       dischargeRateText: MISSING_TEXT,
       dropText: MISSING_TEXT,
     };
@@ -262,13 +264,13 @@ export function buildEstimateView(estimate: BatteryTestEstimate | null | undefin
   const dropText =
     drop == null
       ? MISSING_TEXT
-      : `${formatNumber(drop, 1)} p.p.${windowS == null ? "" : ` em ${formatNumber(windowS, 1)} s`}`;
+      : `${formatNumber(drop, 1)} p.p.${windowS == null ? "" : ` in ${formatNumber(windowS, 1)} s`}`;
 
   if (!estimate.available) {
     return {
       available: false,
       runtimeText: MISSING_TEXT,
-      note: estimate.reason ? `Sem autonomia estimada: ${estimate.reason}` : "Autonomia não estimada.",
+      note: estimate.reason ? `No estimated runtime: ${estimate.reason}` : "Runtime not estimated.",
       dischargeRateText,
       dropText,
     };
@@ -279,48 +281,48 @@ export function buildEstimateView(estimate: BatteryTestEstimate | null | undefin
     return {
       available: false,
       runtimeText: MISSING_TEXT,
-      note: "A API marcou a estimativa como disponível, mas não publicou a autonomia.",
+      note: "The API marked the estimate as available, but did not publish the runtime.",
       dischargeRateText,
       dropText,
     };
   }
 
-  // `estimated_runtime_min` é limitado a `capped_at_min` (teto de sanidade):
-  // quando empata com o teto, o valor é um piso, não uma precisão.
+  // `estimated_runtime_min` is limited to `capped_at_min` (sanity ceiling):
+  // when it ties with the ceiling, the value is a floor, not a precise figure.
   const capped = estimate.capped_at_min ?? null;
   const reachedCap = capped !== null && runtime >= capped;
   const runtimeText = reachedCap
-    ? `≥ ${formatAge(capped * 60)} (extrapolação)`
+    ? `≥ ${formatAge(capped * 60)} (extrapolation)`
     : formatAge(runtime * 60);
 
   const confidence = estimate.confidence ?? "low";
-  const parts = ["Extrapolação linear de 1ª ordem"];
+  const parts = ["First-order linear extrapolation"];
   if (estimate.method) parts.push(estimate.method);
-  parts.push(`confiança ${confidence}`);
+  parts.push(`confidence ${confidence}`);
 
   return {
     available: true,
     runtimeText,
-    note: `${parts.join(" · ")}. Estimativa, não medição.`,
+    note: `${parts.join(" · ")}. Estimate, not a measurement.`,
     dischargeRateText,
     dropText,
   };
 }
 
-// ------------------------------------------------------------------ gráficos ---
+// ------------------------------------------------------------------- charts ---
 
 export interface ChartPoint {
-  /** `offset_s` — eixo X, em segundos desde o início da janela. */
+  /** `offset_s` — X axis, in seconds since the start of the window. */
   x: number;
-  /** Valor da métrica normalizada — eixo Y. */
+  /** Normalized metric value — Y axis. */
   y: number;
 }
 
-/** Como resumir a oscilação da métrica no bloco lateral. */
+/** How to summarize the metric oscillation in the side block. */
 type ChartSummaryKind = "oscillation" | "variation" | "drop";
 
 interface ChartDefinition {
-  /** Chave em `samples[].normalized` (também o id do bloco selecionável). */
+  /** Key in `samples[].normalized` (also the id of the selectable block). */
   key: string;
   label: string;
   unit: string;
@@ -329,14 +331,14 @@ interface ChartDefinition {
 }
 
 /**
- * Os QUATRO gráficos do quadrante: tensão de saída, frequência, temperatura
- * interna e carga da bateria. A ordem é a da barra lateral de seleção.
+ * The FOUR charts of the quadrant: output voltage, frequency, internal
+ * temperature and battery charge. The order is the one of the selection side bar.
  */
 const CHART_DEFINITIONS: ChartDefinition[] = [
-  { key: "output_voltage_v", label: "Tensão de saída", unit: "V", decimals: 1, summary: "oscillation" },
-  { key: "frequency_hz", label: "Frequência", unit: "Hz", decimals: 1, summary: "oscillation" },
-  { key: "temperature_c", label: "Temperatura interna", unit: "°C", decimals: 1, summary: "variation" },
-  { key: "battery_charge_percent", label: "Carga da bateria", unit: "%", decimals: 1, summary: "drop" },
+  { key: "output_voltage_v", label: "Output voltage", unit: "V", decimals: 1, summary: "oscillation" },
+  { key: "frequency_hz", label: "Frequency", unit: "Hz", decimals: 1, summary: "oscillation" },
+  { key: "temperature_c", label: "Internal temperature", unit: "°C", decimals: 1, summary: "variation" },
+  { key: "battery_charge_percent", label: "Battery charge", unit: "%", decimals: 1, summary: "drop" },
 ];
 
 export interface TestChartModel {
@@ -345,16 +347,16 @@ export interface TestChartModel {
   unit: string;
   decimals: number;
   points: ChartPoint[];
-  /** `false` quando a chave nunca apareceu: série indisponível, NUNCA zero. */
+  /** `false` when the key never appeared: series unavailable, NEVER zero. */
   available: boolean;
-  /** Oscilação resumida na barra lateral (vem de `deltas.metrics`). */
+  /** Oscillation summarized in the side bar (comes from `deltas.metrics`). */
   variationText: string;
-  /** Linha de referência tracejada (o alvo de carga no teste de descarga). */
+  /** Dashed reference line (the charge target in the discharge test). */
   reference: number | null;
   referenceLabel: string | null;
 }
 
-/** Pontos de UMA métrica: chave ausente/nula é IGNORADA (nunca vira 0). */
+/** Points of ONE metric: an absent/null key is IGNORED (never becomes 0). */
 export function buildChartPoints(
   samples: BatteryTestSample[] | null | undefined,
   key: string,
@@ -378,19 +380,19 @@ function buildVariationText(
   if (definition.summary === "oscillation") {
     const ripple = metric.ripple;
     if (ripple == null) return MISSING_TEXT;
-    return `Oscilação ${formatNumber(ripple, definition.decimals)} ${definition.unit}`;
+    return `Oscillation ${formatNumber(ripple, definition.decimals)} ${definition.unit}`;
   }
   const delta = metric.delta;
   if (delta == null) return MISSING_TEXT;
   const signed = `${delta > 0 ? "+" : ""}${formatNumber(delta, definition.decimals)}`;
   return definition.summary === "drop"
-    ? `Queda ${signed} p.p.`
-    : `Variação ${signed} ${definition.unit}`;
+    ? `Drop ${signed} p.p.`
+    : `Variation ${signed} ${definition.unit}`;
 }
 
 /**
- * Modelos da barra lateral e do gráfico, montados a partir de
- * `samples[].normalized` (contrato §5) e do resumo em `deltas.metrics`.
+ * Models of the side bar and the chart, built from `samples[].normalized`
+ * (contract §5) and the summary in `deltas.metrics`.
  */
 export function buildTestChartModels(
   report: Pick<BatteryTestReport, "samples" | "deltas" | "target_percent"> | null | undefined,
@@ -411,15 +413,15 @@ export function buildTestChartModels(
       available: points.length > 0,
       variationText: buildVariationText(definition, metrics[definition.key] ?? null),
       reference,
-      referenceLabel: reference == null ? null : `alvo ${formatNumber(reference, 0)}%`,
+      referenceLabel: reference == null ? null : `target ${formatNumber(reference, 0)}%`,
     };
   });
 }
 
-// ------------------------- geometria do gráfico (SVG próprio, sem biblioteca) ---
+// ------------------------- chart geometry (own SVG, no library) ---
 
 export interface ChartTick {
-  /** Posição no sistema de coordenadas do SVG (px). */
+  /** Position in the SVG coordinate system (px). */
   pos: number;
   text: string;
 }
@@ -427,13 +429,13 @@ export interface ChartTick {
 export interface LineChartGeometry {
   width: number;
   height: number;
-  /** Traçado `M`/`L` da série, já projetado no SVG. */
+  /** `M`/`L` trace of the series, already projected into the SVG. */
   path: string;
   yTicks: ChartTick[];
   xTicks: ChartTick[];
-  /** Posição Y da linha de referência, quando houver. */
+  /** Y position of the reference line, when present. */
   referencePos: number | null;
-  /** Limites horizontais da área de plotagem (para grade e linha de referência). */
+  /** Horizontal limits of the plot area (for the grid and the reference line). */
   plotLeft: number;
   plotRight: number;
 }
@@ -441,10 +443,10 @@ export interface LineChartGeometry {
 const CHART_PADDING = { top: 10, right: 12, bottom: 20, left: 42 };
 
 /**
- * Eixo X: `offset_s` em segundos. O formato vale para o eixo inteiro — misturar
- * "0,0 s" com "4:06" no mesmo gráfico confunde —, então `clock` decide o modo:
- * `m:ss` quando a janela tem 60 s ou mais (o `discharge_20pct` dura minutos) e
- * `s.S` no teste curto de 10 s (doc do contrato §4.3).
+ * X axis: `offset_s` in seconds. The format applies to the whole axis — mixing
+ * "0.0 s" with "4:06" in the same chart is confusing — so `clock` decides the
+ * mode: `m:ss` when the window is 60 s or more (the `discharge_20pct` lasts
+ * minutes) and `s.S` in the short 10 s test (contract doc §4.3).
  */
 export function formatOffsetSeconds(seconds: number, clock = false): string {
   if (!Number.isFinite(seconds)) return MISSING_TEXT;
@@ -456,9 +458,10 @@ export function formatOffsetSeconds(seconds: number, clock = false): string {
 }
 
 /**
- * Projeta a série para o SVG. O eixo Y usa FOLGA proporcional: as oscilações de
- * tensão e frequência são pequenas (±2 V, ±0,5 Hz) e uma escala fixa de 0–250 V
- * as esconderia (doc do contrato §6). Devolve `null` quando não há pontos.
+ * Projects the series into the SVG. The Y axis uses PROPORTIONAL padding: the
+ * voltage and frequency oscillations are small (±2 V, ±0.5 Hz) and a fixed scale
+ * of 0–250 V would hide them (contract doc §6). Returns `null` when there are no
+ * points.
  */
 export function buildLineChart(
   points: ChartPoint[],
@@ -520,18 +523,19 @@ export function buildLineChart(
   };
 }
 
-// ------------------------------------------------ confirmação do estado de teste ---
+// ------------------------------------------------ test state confirmation ---
 
 export interface TestObservationView {
-  /** `true`/`false` quando a API concluiu; `null` enquanto o teste corre. */
+  /** `true`/`false` when the API has concluded; `null` while the test runs. */
   observed: boolean | null;
   level: "good" | "warning" | "unknown";
   text: string;
 }
 
 /**
- * Confirma se o nobreak REALMENTE reportou o estado "Teste em andamento"
- * (`TEST` em `flags_seen`) durante a janela. É a prova de que o teste ocorreu.
+ * Confirms whether the UPS REALLY reported the "Test in progress" state
+ * (`TEST` in `flags_seen`) during the window. It is the proof that the test
+ * occurred.
  */
 export function buildObservationView(
   report: Pick<BatteryTestReport, "status" | "test_flag_observed" | "flags_seen"> | null,
@@ -540,7 +544,7 @@ export function buildObservationView(
     return {
       observed: null,
       level: "unknown",
-      text: "Verificando se o equipamento reportou o estado de teste…",
+      text: "Checking whether the device reported the test state…",
     };
   }
   const seen = report.flags_seen ?? [];
@@ -551,26 +555,26 @@ export function buildObservationView(
     return {
       observed: true,
       level: "good",
-      text: "O equipamento reportou a flag TEST durante o teste.",
+      text: "The device reported the TEST flag during the test.",
     };
   }
   if (sawTestFlag) {
     return {
       observed: false,
       level: "warning",
-      text: "A flag TEST apareceu nas amostras, mas a API não a confirmou nesta janela.",
+      text: "The TEST flag appeared in the samples, but the API did not confirm it in this window.",
     };
   }
   return {
     observed: false,
     level: "warning",
-    text: "O equipamento NÃO reportou o estado de teste nesta janela — confirme o resultado.",
+    text: "The device did NOT report the test state in this window — confirm the result.",
   };
 }
 
-// ------------------------------------------------------------------- progresso ---
+// ------------------------------------------------------------------- progress ---
 
-/** Entrada comum ao aceite (`202`) e ao relatório — só o que é publicado. */
+/** Input common to the acceptance (`202`) and to the report — only what is published. */
 export interface TestProgressInput {
   status: string;
   type?: string | null;
@@ -584,9 +588,9 @@ export interface TestProgressInput {
 }
 
 export interface TestProgressView {
-  /** `window` = janela fixa; `target` = descarga até o alvo. */
+  /** `window` = fixed window; `target` = discharge down to the target. */
   mode: "window" | "target";
-  /** Fração 0..1; `null` quando não há dado suficiente (barra indeterminada). */
+  /** Fraction 0..1; `null` when there is not enough data (indeterminate bar). */
   fraction: number | null;
   text: string;
 }
@@ -595,7 +599,7 @@ function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value));
 }
 
-/** Carga atual: o `final` do relatório ou a última amostra com a chave. */
+/** Current charge: the report's `final` or the last sample with the key. */
 function currentChargePercent(report: TestProgressInput): number | null {
   const finalValue = report.final?.["battery_charge_percent"];
   if (typeof finalValue === "number" && Number.isFinite(finalValue)) return finalValue;
@@ -616,11 +620,12 @@ function windowSecondsFromExpected(report: TestProgressInput): number | null {
 }
 
 /**
- * Progresso do teste em execução.
+ * Progress of the running test.
  *
- * No teste de JANELA a fração é o tempo decorrido sobre a janela pedida. No teste
- * por ALVO (`discharge_20pct`) o progresso é a CARGA que caiu em direção ao alvo —
- * nunca os 30 min de `expected_end_at_utc`, que são apenas o teto de segurança.
+ * In the WINDOW test the fraction is the elapsed time over the requested window.
+ * In the by-TARGET test (`discharge_20pct`) the progress is the CHARGE that has
+ * dropped towards the target — never the 30 min of `expected_end_at_utc`, which
+ * are only the safety ceiling.
  */
 export function buildTestProgress(
   report: TestProgressInput | null,
@@ -630,7 +635,7 @@ export function buildTestProgress(
 
   const target = report.target_percent;
   if (target != null) {
-    const label = `Descarregando até ${formatNumber(target, 0)}%`;
+    const label = `Discharging to ${formatNumber(target, 0)}%`;
     const startCharge = report.baseline?.["battery_charge_percent"] ?? null;
     const currentCharge = currentChargePercent(report);
     if (startCharge == null || currentCharge == null || startCharge <= target) {
@@ -639,14 +644,14 @@ export function buildTestProgress(
         fraction: null,
         text:
           currentCharge == null
-            ? `${label} (aguardando a primeira amostra)`
-            : `${label} · atual: ${formatNumber(currentCharge, 0)}%`,
+            ? `${label} (waiting for the first sample)`
+            : `${label} · current: ${formatNumber(currentCharge, 0)}%`,
       };
     }
     return {
       mode: "target",
       fraction: clamp01((startCharge - currentCharge) / (startCharge - target)),
-      text: `${label} · atual: ${formatNumber(currentCharge, 0)}%`,
+      text: `${label} · current: ${formatNumber(currentCharge, 0)}%`,
     };
   }
 
@@ -659,16 +664,16 @@ export function buildTestProgress(
   return {
     mode: "window",
     fraction: clamp01(elapsed / windowSeconds),
-    text: `${formatNumber(elapsed, 1)} s de ${formatNumber(windowSeconds, 1)} s`,
+    text: `${formatNumber(elapsed, 1)} s of ${formatNumber(windowSeconds, 1)} s`,
   };
 }
 
-// -------------------------------------------------------------------- histórico ---
+// -------------------------------------------------------------------- history ---
 
 export interface HistoryRowView {
   testId: string;
   startedText: string;
-  /** Rótulo do tipo do teste (janela × descarga por alvo). */
+  /** Label of the test type (window × discharge by target). */
   typeText: string;
   statusText: string;
   finishText: string;
@@ -678,8 +683,8 @@ export interface HistoryRowView {
 }
 
 /**
- * Histórico recente (`GET .../tests`) — só os fatos publicados pela API. O
- * histórico é em memória e se perde quando o serviço reinicia.
+ * Recent history (`GET .../tests`) — only the facts published by the API. The
+ * history is in memory and is lost when the service restarts.
  */
 export function buildHistoryRows(
   tests: BatteryTestListItem[] | null | undefined,
@@ -692,7 +697,7 @@ export function buildHistoryRows(
       estimate && estimate.available && estimate.estimated_runtime_min != null
         ? formatAge(estimate.estimated_runtime_min * 60)
         : estimate?.reason
-          ? `sem estimativa (${estimate.reason})`
+          ? `no estimate (${estimate.reason})`
           : MISSING_TEXT;
     return {
       testId: item.test_id,

@@ -1,199 +1,197 @@
-# Design system e diretrizes de interface
+# Design system and interface guidelines
 
-Base: escopo §4 (identidade visual), §5 (UX e layout) e §6 (regras dos gauges), com o **ajuste de
-estilo adotado em 2026-10-21** (ver [decisoes-tecnicas.md](./decisoes-tecnicas.md), D16).
+Base: scope §4 (visual identity), §5 (UX and layout) and §6 (gauge rules), with the **style adjustment
+adopted on 2026-10-21** (see [technical-decisions.md](./technical-decisions.md), D16).
 
-> **Divergência registrada.** O escopo §4.1 e 30-ui-ux pediam fundo geral branco (`#FFFFFF`). Por
-> solicitação do usuário, a interface passou a seguir a linguagem visual do template de referência
-> `torre_de_controle_log_stica_nstech.html`: **fundo escuro, alto contraste e tipografia Barlow**,
-> em um painel de quatro quadrantes sem rolagem. As regras de UX (§5 e 30-ui-ux) continuam valendo
-> integralmente — em especial: a cor nunca é o único sinal de estado, valor ausente nunca vira zero
-> e o percentual de bateria é sempre marcado como estimativa.
+> **Recorded divergence.** Scope §4.1 and 30-ui-ux asked for a white overall background (`#FFFFFF`). At
+> the user's request, the interface started following the visual language of an internal control-tower
+> dashboard used as a visual reference: **dark background, high contrast and the Barlow typeface**, in
+> a four-quadrant panel without scrolling. The UX rules (§5 and 30-ui-ux) still fully apply — in
+> particular: color is never the only state signal, a missing value never becomes zero and the battery
+> percentage is always marked as an estimate.
 
-## 1. Paleta
+## 1. Palette
 
-| Token | Cor | Uso |
+| Token | Color | Use |
 |---|---|---|
-| `--brand` | `#FF3D03` | Ações principais, foco, borda de destaque do quadrante de contexto, selo de "estimativa" |
-| `--ink-strong` | `#FFFFFF` | Títulos, valores numéricos, hierarquia alta |
-| `--ink-secondary` | `#9EA8B8` | Texto secundário, rótulos, descrições |
-| `--line` | `#1D2335` | Bordas, divisórias, marcações de escala |
-| `--surface` | `#030408` | Fundo geral (palco) |
-| `--panel` | `#070913` | Fundo dos quadrantes |
-| `--card` | `#0C101F` | Fundo dos cartões de gauge |
+| `--brand` | `#FF3D03` | Primary actions, focus, highlight border of the context quadrant, "estimate" tag |
+| `--ink-strong` | `#FFFFFF` | Titles, numeric values, high hierarchy |
+| `--ink-secondary` | `#9EA8B8` | Secondary text, labels, descriptions |
+| `--line` | `#1D2335` | Borders, dividers, scale marks |
+| `--surface` | `#030408` | Overall background (stage) |
+| `--panel` | `#070913` | Quadrant background |
+| `--card` | `#0C101F` | Gauge card background |
 
-A cor principal **não** domina a tela: ela aparece na borda do quadrante de contexto, no botão de
-atualização, no foco visível e no selo de estimativa.
+The primary color does **not** dominate the screen: it appears on the border of the context quadrant,
+on the refresh button, on the visible focus and on the estimate tag.
 
-### Cores semânticas (exclusivas da leitura operacional)
+### Semantic colors (exclusive to the operational reading)
 
-| Token | Cor | Significado |
+| Token | Color | Meaning |
 |---|---|---|
-| `--sem-critical` | `#EF4444` | Condição ruim, crítica ou fora da faixa |
-| `--sem-warning` | `#F59E0B` | Atenção, aproximação de limite |
-| `--sem-good` | `#10B981` | Condição normal |
-| `--sem-unknown` | `#9EA8B8` | Sem dados |
+| `--sem-critical` | `#EF4444` | Bad, critical or out-of-band condition |
+| `--sem-warning` | `#F59E0B` | Attention, approaching a limit |
+| `--sem-good` | `#10B981` | Normal condition |
+| `--sem-unknown` | `#9EA8B8` | No data |
 
-Essas cores valem para os gauges, os indicadores de estado e os avisos — a exceção prevista no
-escopo §4.2. Nos demais componentes vale a paleta institucional. Os tons foram escolhidos para
-manter contraste ≥ 4,5:1 sobre `--surface`/`--panel` (fundo escuro).
+These colors apply to the gauges, the state indicators and the notices — the exception provided for in
+scope §4.2. In the other components the institutional palette applies. The tones were chosen to keep a
+contrast ≥ 4.5:1 over `--surface`/`--panel` (dark background).
 
-### Acessibilidade da cor
+### Color accessibility
 
-Cada estado é comunicado por **três canais simultâneos**: cor, valor numérico e rótulo textual
-(com um ponto colorido como reforço visual). Nenhuma informação depende só da cor.
+Each state is communicated through **three simultaneous channels**: color, numeric value and textual
+label (with a colored dot as visual reinforcement). No information depends on color alone.
 
-## 2. Escala dos gauges e faixas semânticas
+## 2. Gauge scale and semantic bands
 
-Definidas em [gaugeConfig.ts](../src/backend/src/gaugeConfig.ts) e publicadas em `GET /api/config`.
-As faixas abaixo foram **validadas pelo solicitante** em 2026-10-21 e continuam sobrescrevíveis por
-`VIEWER_GAUGE_THRESHOLDS` (JSON). **Nenhum limite é recomendação oficial do fabricante.**
+Defined in [gaugeConfig.ts](../src/backend/src/gaugeConfig.ts) and published in `GET /api/config`. The
+bands below were **validated by the requester** on 2026-10-21 and remain overridable via
+`VIEWER_GAUGE_THRESHOLDS` (JSON). **No limit is an official manufacturer recommendation.**
 
-| Métrica | Origem (`sources[]`) | Escala | Faixas | Decimais |
+| Metric | Origin (`sources[]`) | Scale | Bands | Decimals |
 |---|---|---|---|---|
-| Tensão de entrada | `data.measurements.input_voltage_v` | 0–250 V | verde 80–127 e 200–225 · vermelho no restante | 0 |
-| Tensão de saída | `data.measurements.output_voltage_v` | 0–250 V | verde 80–127 e 200–225 · vermelho no restante | 0 |
-| Frequência | `input_frequency_hz` **ou** `output_frequency_hz` (por protocolo) | 20–70 Hz | verde 47–53 e 57–60 · âmbar 42–47, 53–57 e 60–63 · vermelho 20–42 e 63–70 | 1 |
-| Temperatura interna | `data.measurements.temperature_c` | 0–50 °C | verde 0–25 · âmbar 25–35 · vermelho 35–50 | 0 |
-| Carga da bateria | `data.battery_charge.percent` **ou** `data.battery.charge_percent` (por protocolo) | 0–100 % | vermelho 0–20 · âmbar 20–40 · verde 40–100 | 0 |
-| Carga do nobreak | `data.measurements.load_percent` | 0–100 % | verde 0–50 · âmbar 50–75 · vermelho 75–100 | 0 |
+| Input voltage | `data.measurements.input_voltage_v` | 0–250 V | green 80–127 and 200–225 · red otherwise | 0 |
+| Output voltage | `data.measurements.output_voltage_v` | 0–250 V | green 80–127 and 200–225 · red otherwise | 0 |
+| Frequency | `input_frequency_hz` **or** `output_frequency_hz` (per protocol) | 20–70 Hz | green 47–53 and 57–60 · amber 42–47, 53–57 and 60–63 · red 20–42 and 63–70 | 1 |
+| Internal temperature | `data.measurements.temperature_c` | 0–50 °C | green 0–25 · amber 25–35 · red 35–50 | 0 |
+| Battery charge | `data.battery_charge.percent` **or** `data.battery.charge_percent` (per protocol) | 0–100 % | red 0–20 · amber 20–40 · green 40–100 | 0 |
+| UPS load | `data.measurements.load_percent` | 0–100 % | green 0–50 · amber 50–75 · red 75–100 | 0 |
 
-Cada métrica pode ter **mais de uma origem** (`sources[]`), porque protocolos diferentes publicam o
-mesmo dado em campos diferentes; a interface usa a primeira origem presente no payload.
+Each metric can have **more than one origin** (`sources[]`), because different protocols publish the
+same data in different fields; the interface uses the first origin present in the payload.
 
-Observações:
+Notes:
 
-- A faixa de **tensão** cobre as duas janelas nominais adotadas (127 V e 220 V). Para um parque
-  exclusivamente 220 V, ajuste por `VIEWER_GAUGE_THRESHOLDS` (exemplo em `.env.example`).
-- O fabricante **não** documenta faixa operacional de temperatura nem limites de carga. Os valores
-  adotados vêm da validação do solicitante (D3).
-- As faixas **não** aparecem mais como texto sob cada gauge: o cartão mostra apenas o medidor, o
-  valor e o estado textual. A interface só exibe o aviso de configuração quando
-  `threshold_problems` não estiver vazio.
+- The **voltage** band covers both nominal windows adopted (127 V and 220 V). For an exclusively 220 V
+  fleet, adjust via `VIEWER_GAUGE_THRESHOLDS` (example in `.env.example`).
+- The manufacturer does **not** document an operating temperature range nor load limits. The adopted
+  values come from the requester's validation (D3).
+- The bands **no longer** appear as text under each gauge: the card shows only the meter, the value and
+  the textual state. The interface only shows the configuration notice when `threshold_problems` is
+  not empty.
 
-### Como validar/alterar
+### How to validate/change
 
 ```bash
-# exemplo: nobreak com saída 220 V
+# example: UPS unit with 220 V output
 VIEWER_GAUGE_THRESHOLDS='{"output_voltage_v":{"scale":{"min":0,"max":300,"ticks":[0,75,150,225,300]},
-"bands":[{"level":"critical","from":0,"to":198,"label":"Fora da faixa"},
-{"level":"warning","from":198,"to":209,"label":"Atenção: abaixo do ideal"},
-{"level":"good","from":209,"to":231,"label":"Faixa esperada (220 V)"},
-{"level":"warning","from":231,"to":242,"label":"Atenção: acima do ideal"},
-{"level":"critical","from":242,"to":300,"label":"Fora da faixa"}]}}'
+"bands":[{"level":"critical","from":0,"to":198,"label":"Out of range"},
+{"level":"warning","from":198,"to":209,"label":"Attention: below ideal"},
+{"level":"good","from":209,"to":231,"label":"Expected range (220 V)"},
+{"level":"warning","from":231,"to":242,"label":"Attention: above ideal"},
+{"level":"critical","from":242,"to":300,"label":"Out of range"}]}}'
 ```
 
-JSON inválido, métrica desconhecida, faixa fora da escala ou faixas sobrepostas **não** são aceitos
-em silêncio: geram entradas em `threshold_problems`, exibidas na interface.
+Invalid JSON, unknown metric, band outside the scale or overlapping bands are **not** accepted
+silently: they generate entries in `threshold_problems`, displayed in the interface.
 
-## 3. Anatomia do gauge
+## 3. Gauge anatomy
 
-Semicírculo de 220 × 132 unidades de viewBox, centro em (110, 110), raio 84, espessura de arco 18,
-ponteiro de 66. Componente único:
-[Gauge.tsx](../src/frontend/src/components/Gauge.tsx).
+Semicircle of 220 × 132 viewBox units, center at (110, 110), radius 84, arc thickness 18, needle 66.
+Single component: [Gauge.tsx](../src/frontend/src/components/Gauge.tsx).
 
-Camadas, de baixo para cima:
+Layers, from bottom to top:
 
-1. **trilha neutra** (`#192033`) cobrindo toda a escala;
-2. **faixas semânticas** — um arco por faixa, colorido por nível;
-3. **limites das faixas** — traços e rótulos no **início e no fim de cada faixa** (`bands`, via
-   `bandBoundaries`), e não em marcações fixas de `scale.ticks`: assim o usuário lê onde cada
-   trecho colorido começa e termina;
-4. **ponteiro** — linha do centro até o valor, com eixo;
-5. **valor central** — número em 30 px + unidade em 12 px, com halo na cor do cartão (`--card`) para
-   permanecer legível sobre o ponteiro;
-6. **legenda** — nome da métrica, selo "estimativa" quando aplicável e estado textual com ponto
-   colorido.
+1. **neutral track** (`#192033`) covering the whole scale;
+2. **semantic bands** — one arc per band, colored by level;
+3. **band boundaries** — tick marks and labels at the **start and end of each band** (`bands`, via
+   `bandBoundaries`), and not at fixed `scale.ticks` marks: this way the user reads where each colored
+   stretch begins and ends;
+4. **needle** — line from the center to the value, with an axis;
+5. **central value** — number at 30 px + unit at 12 px, with a halo in the card color (`--card`) to
+   remain legible over the needle;
+6. **legend** — metric name, "estimate" tag when applicable and textual state with a colored dot.
 
-Estados visuais:
+Visual states:
 
-| Estado | Classe | Aparência |
+| State | Class | Appearance |
 |---|---|---|
-| Valor em faixa boa | `gauge--good` | Rótulo em verde |
-| Valor em atenção | `gauge--warning` | Rótulo em âmbar |
-| Valor crítico | `gauge--critical` | Rótulo em vermelho |
-| Sem dados | `gauge--empty` | Faixas e trilha esmaecidas, ponteiro ausente, valor "—", rótulo "Sem dados" |
-| Desatualizado | `gauge--stale` | SVG com opacidade reduzida e rótulo "Desatualizado" |
+| Value in a good band | `gauge--good` | Label in green |
+| Value in attention | `gauge--warning` | Label in amber |
+| Critical value | `gauge--critical` | Label in red |
+| No data | `gauge--empty` | Bands and track dimmed, needle absent, value "—", label "No data" |
+| Stale | `gauge--stale` | SVG at reduced opacity and label "Stale" |
 
-## 4. Composição do dashboard (quatro quadrantes)
+## 4. Dashboard composition (four quadrants)
 
-O painel ocupa exatamente a janela, em grade 2×2, sem rolagem de página no desktop.
+The panel occupies exactly the window, in a 2×2 grid, without page scrolling on desktop.
 
-1. **Superior esquerdo — contexto e estado operacional:** título do produto, a **seleção em bloco dos
-   nobreaks coletados** (`GET /api/v1/ups`, com **Marca/Modelo** em evidência e o `device_id` como
-   descrição, destacando o que está em exibição), o indicador de comunicação, a última leitura
-   válida, a idade dos dados, a versão do contrato, o endereço da API e o intervalo da atualização
-   automática (não há botão de atualização manual), os avisos (modo demonstração, API indisponível,
-   telemetria ausente/desatualizada, configuração das faixas) e, logo abaixo, **todos** os estados do
-   quadro Q1 sempre à vista — os **ativos** em destaque e os **inativos** apagados — cada um com a
-   descrição e, ao pé, os `raw_bits`.
-2. **Superior direito — medições:** grade **2×3** com os seis gauges.
-3. **Inferior esquerdo — teste de bateria:** o painel do teste, em três blocos (ver §4.1).
-4. **Inferior direito — detalhes e coleta:** identificação, tensão da bateria, estado do coletor,
-   idade, último erro e tabela com o resultado de cada consulta HTTP.
-5. **Rodapé (faixa inferior):** reforço de que a aplicação é somente leitura (a única escrita é o
-   pedido de teste, sempre por ação do usuário) e de que as faixas são configuráveis por
+1. **Top left — context and operational state:** product title, the **block selection of the collected
+   UPS units** (`GET /api/v1/ups`, with **Brand/Model** in evidence and the `device_id` as description,
+   highlighting the one being displayed), the communication indicator, the last valid reading, the data
+   age, the contract version, the API address and the automatic refresh interval (there is no manual
+   refresh button), the notices (demo mode, API unavailable, telemetry missing/stale, band
+   configuration) and, just below, **all** the always-visible Q1 frame states — the **active** ones
+   highlighted and the **inactive** ones dimmed — each with the description and, at the bottom, the
+   `raw_bits`.
+2. **Top right — measurements:** **2×3** grid with the six gauges.
+3. **Bottom left — battery test:** the test panel, in three blocks (see §4.1).
+4. **Bottom right — details and collection:** identification, battery voltage, collector state, age,
+   last error and a table with the result of each HTTP query.
+5. **Footer (bottom band):** reinforcement that the application is read-only (the only write is the
+   test request, always by user action) and that the bands are configurable via
    `VIEWER_GAUGE_THRESHOLDS`.
 
-### 4.1 Quadrante de Teste de Bateria (blocos A, B e C)
+### 4.1 Battery Test quadrant (blocks A, B and C)
 
-O painel segue a divisão da documentação do projeto irmão (`monitor/docs/teste-bateria-quadrante.md`):
+The panel follows the division of the telemetry service's documentation
+(`monitor/docs/battery-test-quadrant.md`):
 
-- **Bloco A — controle:** seletor de tipo (só aparece quando o equipamento declara **mais de um**
-  tipo em `capabilities.battery_test.test_types`), botão disparar/cancelar, guardas pré-clique
-  (cooldown, carga mínima, ausência de cancelamento) e o estado corrente.
-- **Bloco B — gráficos:** **barra lateral esquerda com quatro blocos selecionáveis** — tensão de
-  saída (V), frequência (Hz), temperatura interna (°C) e carga da bateria (%) — e, à direita, o
-  gráfico da série escolhida. Cada bloco já resume a oscilação da própria métrica (`deltas.metrics`)
-  para que o número seja visível sem trocar de gráfico; o ativo fica em destaque e o botão usa
-  `aria-pressed`. Quando a chave não foi publicada em `samples[].normalized`, o bloco mostra "série
-  indisponível" e o gráfico explica — **nunca** é desenhada uma linha reta em zero.
-- **Bloco C — resumo:** situação do teste, motivo do encerramento (`finish_reason`), contagem de
-  amostras, autonomia estimada (com o `reason` quando `estimate.available` é falso) e a observação
-  da flag `TEST`. Os testes anteriores aparecem em tabela (com a coluna **Tipo**).
+- **Block A — control:** type selector (only appears when the device declares **more than one** type in
+  `capabilities.battery_test.test_types`), start/abort button, pre-click guards (cooldown, minimum
+  charge, absence of cancellation) and the current state.
+- **Block B — charts:** **left sidebar with four selectable blocks** — output voltage (V), frequency
+  (Hz), internal temperature (°C) and battery charge (%) — and, on the right, the chart of the chosen
+  series. Each block already summarizes the ripple of its own metric (`deltas.metrics`) so that the
+  number is visible without switching charts; the active one is highlighted and the button uses
+  `aria-pressed`. When the key was not published in `samples[].normalized`, the block shows "series
+  unavailable" and the chart explains — a straight line at zero is **never** drawn.
+- **Block C — summary:** test outcome, finish reason (`finish_reason`), sample count, estimated runtime
+  (with the `reason` when `estimate.available` is false) and the observation of the `TEST` flag.
+  Previous tests appear in a table (with the **Type** column).
 
-**Gráficos em SVG próprio**, sem biblioteca: trilha de grade discreta, rótulos de eixo em
-`--ink-secondary`, linha da série em `--brand` e linha de referência do alvo em `--sem-warning`
-tracejada. A escala Y é **automática com folga de 15 %** — as oscilações de tensão e frequência são
-pequenas (±2 V, ±0,5 Hz) e uma escala fixa de 0–250 V as esconderia. O eixo X usa `m:ss` quando a
-janela tem 60 s ou mais (o teste de descarga dura minutos) e `s.S` no teste curto, com o **mesmo**
-formato em todos os rótulos do gráfico. Em telas estreitas, os blocos da barra lateral passam a
-uma faixa horizontal acima do gráfico.
+**Charts in custom SVG**, without a library: discreet grid track, axis labels in `--ink-secondary`,
+series line in `--brand` and dashed target reference line in `--sem-warning`. The Y scale is
+**automatic with a 15 % margin** — the voltage and frequency oscillations are small (±2 V, ±0.5 Hz) and
+a fixed 0–250 V scale would hide them. The X axis uses `m:ss` when the window is 60 s or more (the
+discharge test lasts minutes) and `s.S` in the short test, with the **same** format in all chart
+labels. On narrow screens, the sidebar blocks become a horizontal band above the chart.
 
-### Preparação para múltiplos nobreaks
+### Preparation for multiple UPS units
 
-O quadrante de contexto lista os equipamentos devolvidos pela API (`dashboard.devices.devices`),
-destacando o que está **em exibição** e os que estão **disponíveis**. A entrada de novos nobreaks na
-rede, portanto, não exige redesenho do painel: a navegação entre equipamentos é uma evolução do
-mesmo bloco, sem marca/modelo fixos no código.
+The context quadrant lists the devices returned by the API (`dashboard.devices.devices`), highlighting
+the one **being displayed** and those **available**. The entry of new UPS units on the network,
+therefore, does not require redesigning the panel: navigating between devices is an evolution of the
+same block, with no brand/model hardcoded in the code.
 
-## 5. Regras de exibição de ausência e obsolescência
+## 5. Rules for displaying absence and staleness
 
-- Valor `null`, ausente ou não numérico → **"Sem dados"**; nunca `0`.
-- Leitura `stale` → o número é mostrado com o rótulo **"Desatualizado"** e um aviso no topo com a
-  idade da última leitura válida.
-- Identidade indisponível → bloco com mensagem explicando que a API não publicou a identificação.
-- Sem estados ativos → "Nenhum estado ativo informado pelo equipamento nesta leitura" (jamais
-  "rede elétrica normal": ausência de `OB` não é evidência de rede normal).
-- API indisponível ≠ telemetria desatualizada: são avisos distintos e com códigos distintos.
+- Value `null`, absent or non-numeric → **"No data"**; never `0`.
+- `stale` reading → the number is shown with the **"Stale"** label and a notice at the top with the age
+  of the last valid reading.
+- Identity unavailable → block with a message explaining that the API did not publish the
+  identification.
+- No active states → "No active state reported by the device in this reading" (never "mains power
+  normal": the absence of `OB` is not evidence of normal mains).
+- API unavailable ≠ stale telemetry: these are distinct notices with distinct codes.
 
-## 6. Layout e responsividade
+## 6. Layout and responsiveness
 
-- **Desktop:** palco de 2×2 com `height: 100dvh` e `overflow: hidden` — sem rolagem de página. Cada
-  quadrante tem rolagem interna própria (`overflow: hidden auto`) para conteúdos longos.
-- **≤ 900 px:** o palco colapsa para uma coluna e a página volta a rolar; os gauges usam grade
-  fluida (`auto-fit`/`minmax`).
-- **≤ 420 px:** uma coluna.
-- Nunca há rolagem horizontal: sem larguras fixas em `px` nos contêineres e `overflow-wrap` no
-  endereço da API e nos quadros brutos.
-- Foco visível em todos os elementos interativos (`:focus-visible` com contorno `#FF3D03` de 3 px).
-- Link "Ir para o conteúdo" para navegação por teclado.
-- `prefers-reduced-motion` respeitado (não há animação de valor: o dashboard evita oscilações).
+- **Desktop:** 2×2 stage with `height: 100dvh` and `overflow: hidden` — no page scrolling. Each
+  quadrant has its own internal scrolling (`overflow: hidden auto`) for long content.
+- **≤ 900 px:** the stage collapses to a single column and the page scrolls again; the gauges use a
+  fluid grid (`auto-fit`/`minmax`).
+- **≤ 420 px:** a single column.
+- There is never horizontal scrolling: no fixed widths in `px` on the containers and `overflow-wrap` on
+  the API address and the raw frames.
+- Visible focus on all interactive elements (`:focus-visible` with a 3 px `#FF3D03` outline).
+- "Skip to content" link for keyboard navigation.
+- `prefers-reduced-motion` respected (there is no value animation: the dashboard avoids oscillations).
 
-## 7. Tipografia
+## 7. Typography
 
-**Barlow** (Google Fonts, pesos 400–800 e itálico 700) declarada em
-[index.html](../src/frontend/index.html), com *fallback* para fontes de sistema
-(`system-ui`, `Segoe UI`, `Roboto`, `sans-serif`). Valores numéricos em negrito com a unidade em
-corpo menor e alinhamento tabular (`font-variant-numeric: tabular-nums`); caminhos e `raw_bits` em
-fonte monoespaçada.
+**Barlow** (Google Fonts, weights 400–800 and italic 700) declared in
+[index.html](../src/frontend/index.html), with *fallback* to system fonts (`system-ui`, `Segoe UI`,
+`Roboto`, `sans-serif`). Numeric values in bold with the unit in a smaller body and tabular alignment
+(`font-variant-numeric: tabular-nums`); paths and `raw_bits` in a monospaced font.

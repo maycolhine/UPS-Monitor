@@ -1,8 +1,8 @@
 {
-  "name": "@ups-viewer/frontend",
+  "name": "@ups-monitor/frontend",
   "version": "1.0.0",
   "private": true,
-  "description": "Dashboard responsivo de leitura da telemetria do nobreak",
+  "description": "Responsive dashboard for reading the UPS telemetry",
   "type": "module",
   "scripts": {
     "dev": "vite",

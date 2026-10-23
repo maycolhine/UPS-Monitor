@@ -15,8 +15,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("cliente de API do frontend", () => {
-  it("consulta /api/dashboard por GET na própria origem", async () => {
+describe("frontend API client", () => {
+  it("queries /api/dashboard via GET on its own origin", async () => {
     const mock = vi.fn(async (_path: string, _init: RequestInit) => jsonResponse({ viewer: {}, telemetry: null }));
     vi.stubGlobal("fetch", mock);
 
@@ -29,7 +29,7 @@ describe("cliente de API do frontend", () => {
     expect(init.method).toBe("GET");
   });
 
-  it("envia ?device_id= quando um nobreak é escolhido (um por vez)", async () => {
+  it("sends ?device_id= when a UPS is selected (one at a time)", async () => {
     const mock = vi.fn(async (_path: string, _init: RequestInit) => jsonResponse({ viewer: {}, telemetry: null }));
     vi.stubGlobal("fetch", mock);
 
@@ -39,7 +39,7 @@ describe("cliente de API do frontend", () => {
     expect(path).toBe("/api/dashboard?device_id=sms-ups3200s-01");
   });
 
-  it("consulta /api/config por GET", async () => {
+  it("queries /api/config via GET", async () => {
     const mock = vi.fn(async (_path: string, _init: RequestInit) => jsonResponse({ gauges: [] }));
     vi.stubGlobal("fetch", mock);
 
@@ -49,11 +49,11 @@ describe("cliente de API do frontend", () => {
     expect(path).toBe("/api/config");
   });
 
-  it("mantém o corpo útil em HTTP 503 (estado degradado, não falha total)", async () => {
+  it("keeps the useful body on HTTP 503 (degraded state, not a total failure)", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
-        jsonResponse({ viewer: { device_id: null }, telemetry: null, error: { code: "no_devices_configured", message: "sem dispositivos" } }, 503),
+        jsonResponse({ viewer: { device_id: null }, telemetry: null, error: { code: "no_devices_configured", message: "no devices" } }, 503),
       ),
     );
 
@@ -64,7 +64,7 @@ describe("cliente de API do frontend", () => {
     expect(result.data).not.toBeNull();
   });
 
-  it("sinaliza erro de rede sem lançar exceção", async () => {
+  it("signals a network error without throwing", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => {
@@ -79,7 +79,7 @@ describe("cliente de API do frontend", () => {
     expect(result.data).toBeNull();
   });
 
-  it("sinaliza resposta sem JSON válido", async () => {
+  it("signals a response without valid JSON", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => ({
@@ -98,21 +98,21 @@ describe("cliente de API do frontend", () => {
     expect(result.status).toBe(200);
   });
 
-  it("propaga o código de erro do envelope em 502", async () => {
+  it("propagates the envelope error code on 502", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
-        jsonResponse({ viewer: {}, error: { code: "upstream_timeout", message: "tempo esgotado" } }, 502),
+        jsonResponse({ viewer: {}, error: { code: "upstream_timeout", message: "timed out" } }, 502),
       ),
     );
 
     const result = await fetchDashboard();
 
     expect(result.ok).toBe(false);
-    expect(result.error).toEqual({ code: "upstream_timeout", message: "tempo esgotado" });
+    expect(result.error).toEqual({ code: "upstream_timeout", message: "timed out" });
   });
 
-  it("trata cancelamento (AbortController) sem tratar como falha de rede", async () => {
+  it("handles cancellation (AbortController) without treating it as a network failure", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => {
@@ -127,16 +127,16 @@ describe("cliente de API do frontend", () => {
 });
 
 describe("isViewerLevelFailure", () => {
-  it("considera falha do Web Viewer apenas transporte e JSON ilegível", () => {
+  it("treats only transport and unreadable JSON as a Web Viewer failure", () => {
     expect(
-      isViewerLevelFailure({ ok: false, status: 0, data: null, error: { code: "network_error", message: "sem rota" } }),
+      isViewerLevelFailure({ ok: false, status: 0, data: null, error: { code: "network_error", message: "no route" } }),
     ).toBe(true);
     expect(
       isViewerLevelFailure({ ok: false, status: 200, data: null, error: { code: "invalid_json", message: "html" } }),
     ).toBe(true);
   });
 
-  it("não classifica envelopes da API de origem como falha do Web Viewer", () => {
+  it("does not classify origin API envelopes as a Web Viewer failure", () => {
     for (const [status, code] of [
       [502, "upstream_unreachable"],
       [502, "upstream_timeout"],

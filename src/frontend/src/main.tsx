@@ -6,7 +6,7 @@ import "./styles/global.css";
 
 const container = document.getElementById("root");
 if (!container) {
-  throw new Error("elemento #root não encontrado");
+  throw new Error("#root element not found");
 }
 
 createRoot(container).render(

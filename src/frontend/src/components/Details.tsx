@@ -1,10 +1,10 @@
 /**
- * Área de detalhes: identificação nominal do equipamento, estado da coleta,
- * idade dos dados, último erro de comunicação, o serviço de telemetria
- * consumido (endereço e contrato) e o resultado de cada consulta feita à API.
+ * Details area: nominal identification of the device, collection state, data
+ * age, last communication error, the telemetry service consumed (address and
+ * contract) and the result of each query made to the API.
  *
- * As informações de "contrato consumido", "idade dos dados" e "API de
- * telemetria" ficam aqui (quarto quadrante), não mais no cabeçalho.
+ * The information on "consumed contract", "data age" and "telemetry API" lives
+ * here (fourth quadrant), no longer in the header.
  */
 import { formatAge, formatLocalDateTime, formatNumber, formatText } from "../model/format.js";
 import type {
@@ -51,22 +51,22 @@ export function Details({ viewer, identity, telemetry }: DetailsProps) {
   const upstreamBaseUrl = viewer?.upstream.base_url ?? null;
 
   return (
-    <section className="panel" aria-labelledby="detalhes">
-      <h2 id="detalhes" className="panel__title">
-        Detalhes e estado da coleta
+    <section className="panel" aria-labelledby="details">
+      <h2 id="details" className="panel__title">
+        Details and collection state
       </h2>
 
       <div className="details-grid">
         <div className="details-block">
-          <h3>Identificação do equipamento</h3>
+          <h3>Device identification</h3>
           {identityAvailable ? (
             <dl className="kv">
               <div>
-                <dt>Fabricante</dt>
+                <dt>Manufacturer</dt>
                 <dd>{formatText(device?.manufacturer)}</dd>
               </div>
               <div>
-                <dt>Modelo</dt>
+                <dt>Model</dt>
                 <dd>{formatText(device?.model)}</dd>
               </div>
               <div>
@@ -74,79 +74,79 @@ export function Details({ viewer, identity, telemetry }: DetailsProps) {
                 <dd>{formatText(device?.firmware)}</dd>
               </div>
               <div>
-                <dt>Tensão nominal</dt>
+                <dt>Nominal voltage</dt>
                 <dd>{formatText(nominal?.voltage_label)}</dd>
               </div>
               <div>
-                <dt>Corrente de entrada nominal</dt>
+                <dt>Nominal input current</dt>
                 <dd>{nominal?.input_current_a == null ? "—" : `${formatNumber(nominal.input_current_a, 0)} A`}</dd>
               </div>
               <div>
-                <dt>Frequência nominal</dt>
+                <dt>Nominal frequency</dt>
                 <dd>{nominal?.frequency_hz == null ? "—" : `${formatNumber(nominal.frequency_hz, 0)} Hz`}</dd>
               </div>
             </dl>
           ) : (
             <p className="panel__empty">
-              A API não disponibilizou a identificação do equipamento nesta consulta.
+              The API did not provide the device identification in this query.
             </p>
           )}
         </div>
 
         <div className="details-block">
-          <h3>Coleta e comunicação</h3>
+          <h3>Collection and communication</h3>
           <dl className="kv">
             <div>
-              <dt>Tensão da bateria (medição)</dt>
+              <dt>Battery voltage (measurement)</dt>
               <dd>{batteryVoltage == null ? "—" : `${formatNumber(batteryVoltage, 1)} V`}</dd>
             </div>
             <div>
-              <dt>Estado da coleta</dt>
+              <dt>Collection state</dt>
               <dd>{communicationStateForDetails(telemetry?.communication)}</dd>
             </div>
             <div>
-              <dt>Idade dos dados</dt>
+              <dt>Data age</dt>
               <dd>{formatAge(age)}</dd>
             </div>
             <div>
-              <dt>Leitura capturada em</dt>
+              <dt>Reading captured at</dt>
               <dd>{formatLocalDateTime(telemetry?.data?.captured_at_utc ?? null)}</dd>
             </div>
             <div>
-              <dt>Telemetria válida</dt>
+              <dt>Valid telemetry</dt>
               <dd>
-                {telemetry ? (telemetry.telemetry_valid ? "Sim" : "Não") : "—"}
-                {telemetry?.stale ? " (desatualizada)" : ""}
+                {telemetry ? (telemetry.telemetry_valid ? "Yes" : "No") : "—"}
+                {telemetry?.stale ? " (stale)" : ""}
               </dd>
             </div>
             <div>
-              <dt>Fonte do quadro</dt>
+              <dt>Frame source</dt>
               <dd>{formatText(telemetry?.data?.source)}</dd>
             </div>
             <div>
-              <dt>Quadro bruto (Q1)</dt>
+              <dt>Raw frame (Q1)</dt>
               <dd className="kv__mono">{formatText(telemetry?.data?.raw_frame)}</dd>
             </div>
           </dl>
 
           {lastError ? (
             <p className="panel__warning">
-              Último erro de comunicação: {formatText(lastError.message ?? lastError.code)} (
+              Last communication error: {formatText(lastError.message ?? lastError.code)} (
               {formatLocalDateTime(lastError.at_utc ?? null)})
             </p>
           ) : null}
         </div>
 
         <div className="details-block">
-          <h3>Serviço de telemetria e consultas</h3>
+          <h3>Telemetry service and queries</h3>
 
           <dl className="kv kv--tight">
             <div>
-              <dt>API de telemetria</dt>
+              <dt>Telemetry API</dt>
               <dd className="kv__mono">{formatText(upstreamBaseUrl)}</dd>
             </div>
             <div>
-              <dt>Contrato consumido</dt>
+              <dt>Consumed contract</dt>
               <dd>
                 {contract
                   ? `api_version ${contract.api_version} · contract_version ${contract.contract_version}`
@@ -158,14 +158,14 @@ export function Details({ viewer, identity, telemetry }: DetailsProps) {
           {viewer ? (
             <table className="sources">
               <caption className="visually-hidden">
-                Resultado de cada consulta HTTP feita pelo Web Viewer à API
+                Result of each HTTP query made by the Web Viewer to the API
               </caption>
               <thead>
                 <tr>
-                  <th scope="col">Consulta</th>
-                  <th scope="col">Resultado</th>
+                  <th scope="col">Query</th>
+                  <th scope="col">Result</th>
                   <th scope="col">HTTP</th>
-                  <th scope="col">Duração</th>
+                  <th scope="col">Duration</th>
                 </tr>
               </thead>
               <tbody>
@@ -173,7 +173,7 @@ export function Details({ viewer, identity, telemetry }: DetailsProps) {
                   <tr key={row.key}>
                     <td className="sources__path">{row.label}</td>
                     <td>
-                      {row.state.ok ? "ok" : (row.state.error?.code ?? "falha")}
+                      {row.state.ok ? "ok" : (row.state.error?.code ?? "failure")}
                     </td>
                     <td>{row.state.http_status ?? "—"}</td>
                     <td>{row.state.duration_ms == null ? "—" : `${row.state.duration_ms} ms`}</td>
@@ -182,7 +182,7 @@ export function Details({ viewer, identity, telemetry }: DetailsProps) {
               </tbody>
             </table>
           ) : (
-            <p className="panel__empty">Sem informação de consulta.</p>
+            <p className="panel__empty">No query information.</p>
           )}
 
           {viewer && viewer.warnings.length > 0 ? (

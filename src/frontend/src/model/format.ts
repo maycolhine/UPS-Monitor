@@ -1,25 +1,25 @@
 /**
- * Formatação para leitura em português do Brasil.
- * Valores ausentes nunca viram "0": viram traço/label de ausência.
+ * Display formatting.
+ * Missing values never become "0": they render as a dash/absence label.
  */
 
 export const MISSING_TEXT = "—";
-export const NO_DATA_TEXT = "Sem dados";
+export const NO_DATA_TEXT = "No data";
 
 export function formatNumber(value: number | null | undefined, decimals = 0): string {
   if (value === null || value === undefined || !Number.isFinite(value)) return MISSING_TEXT;
-  return value.toLocaleString("pt-BR", {
+  return value.toLocaleString("en-US", {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });
 }
 
-/** Converte ISO 8601 UTC em data/hora local (pt-BR). */
+/** Converts an ISO 8601 UTC timestamp into local date/time. */
 export function formatLocalDateTime(iso: string | null | undefined): string {
   if (!iso) return MISSING_TEXT;
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return MISSING_TEXT;
-  return date.toLocaleString("pt-BR", {
+  return date.toLocaleString("en-US", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -33,16 +33,16 @@ export function formatLocalTime(iso: string | null | undefined): string {
   if (!iso) return MISSING_TEXT;
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return MISSING_TEXT;
-  return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
-/** Idade legível: "3,2 s", "1 min 4 s", "2 h 5 min". */
+/** Readable age: "3.2 s", "1 min 4 s", "2 h 5 min". */
 export function formatAge(seconds: number | null | undefined): string {
   if (seconds === null || seconds === undefined || !Number.isFinite(seconds) || seconds < 0) {
     return MISSING_TEXT;
   }
   if (seconds < 60) {
-    return `${seconds.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} s`;
+    return `${seconds.toLocaleString("en-US", { maximumFractionDigits: 1 })} s`;
   }
   const totalMinutes = Math.floor(seconds / 60);
   if (totalMinutes < 60) {
@@ -61,7 +61,7 @@ export function formatPercent(value: number | null | undefined, decimals = 0): s
 
 export function formatBoolean(value: boolean | null | undefined): string {
   if (value === null || value === undefined) return MISSING_TEXT;
-  return value ? "Sim" : "Não";
+  return value ? "Yes" : "No";
 }
 
 export function formatText(value: string | null | undefined): string {

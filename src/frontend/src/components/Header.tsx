@@ -1,10 +1,10 @@
 /**
- * Cabeçalho: identificação do produto, última leitura válida (no canto
- * superior, à direita do título) e a seleção dos nobreaks coletados (recebida
- * via `children`).
+ * Header: product identification, last valid reading (in the top corner, to the
+ * right of the title) and the selection of the collected UPS units (received via
+ * `children`).
  *
- * O estado de comunicação não é mais um texto aqui: cada nobreak da lista traz
- * a sua própria bolinha on/off, e o detalhamento fica no quarto quadrante.
+ * The communication state is no longer text here: each UPS in the list carries
+ * its own on/off dot, and the detail is in the fourth quadrant.
  */
 import type { ReactNode } from "react";
 
@@ -14,7 +14,7 @@ export interface HeaderProps {
   productName: string;
   lastTelemetryAtUtc: string | null;
   refreshIntervalMs: number;
-  /** Seleção em bloco dos nobreaks coletados, exibida abaixo do título. */
+  /** Block selection of the collected UPS units, shown below the title. */
   children?: ReactNode;
 }
 
@@ -26,7 +26,7 @@ export function Header(props: HeaderProps) {
       <div className="header__top">
         <h1 className="header__title">{productName}</h1>
         <dl className="header__reading">
-          <dt>Última leitura válida</dt>
+          <dt>Last valid reading</dt>
           <dd>{formatLocalDateTime(lastTelemetryAtUtc)}</dd>
         </dl>
       </div>
@@ -34,7 +34,7 @@ export function Header(props: HeaderProps) {
       {children}
 
       <p className="header__refresh-note">
-        Atualização automática a cada {Math.round(refreshIntervalMs / 1000)} s
+        Automatic refresh every {Math.round(refreshIntervalMs / 1000)} s
       </p>
     </header>
   );

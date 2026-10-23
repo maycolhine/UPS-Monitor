@@ -1,11 +1,11 @@
 /**
- * Fixtures do contrato da API v1/3.0 (multidispositivo e multiprotocolo).
+ * Fixtures for the API contract v1/3.0 (multi-device and multi-protocol).
  *
- * Valores baseados nas respostas reais documentadas em monitor/docs/api-unificada.md
- * e nas leituras de bancada de 2026-10-22:
+ * Values based on the real responses documented in monitor/docs/unified-api.md
+ * and on the bench readings from 2026-10-22:
  *   - TS Shara Universal UPS Senoidal 3200VA (`megatec-q1`, /dev/ttyACM0);
  *   - SMS Power Sinus NG uPS3200S (`sms-1phase`, /dev/ttyUSB0).
- * São amostras para teste — não são telemetria fixa nem valores esperados.
+ * They are test samples — not fixed telemetry nor expected values.
  */
 
 export const deviceId = "tsshara-3200va-01";
@@ -63,10 +63,10 @@ export const devicesOk = {
       telemetry_valid: true,
       telemetry_endpoint: `/api/v1/ups/${deviceId}/telemetry`,
       identity_endpoint: `/api/v1/ups/${deviceId}/identity`,
-      // Contrato 3.0: o TS Shara declara o teste, mas ele vem desabilitado
-      // (`enabled: false`) e sem cancelamento (`abort_supported: false`).
-      // O `megatec-q1` só oferece a janela de 10 s: pedir `discharge_20pct` a ele
-      // responderia `422 unsupported_test_type`.
+      // Contract 3.0: TS Shara declares the test, but it comes disabled
+      // (`enabled: false`) and without cancellation (`abort_supported: false`).
+      // The `megatec-q1` only offers the 10 s window: requesting `discharge_20pct`
+      // from it would respond `422 unsupported_test_type`.
       capabilities: {
         battery_test: {
           supported: true,
@@ -94,10 +94,10 @@ export const devicesOk = {
       telemetry_valid: false,
       telemetry_endpoint: `/api/v1/ups/${smsDeviceId}/telemetry`,
       identity_endpoint: `/api/v1/ups/${smsDeviceId}/identity`,
-      // O SMS expõe o teste habilitado e cancelável — e, por ser um equipamento
-      // que informa o percentual da bateria, oferece também a descarga
-      // controlada: roda até a carga chegar ao alvo de 20 % ou até o teto de
-      // 30 min (`timeout_s: 1800`), o que vier primeiro.
+      // The SMS exposes the test enabled and cancellable — and, being a device
+      // that reports the battery percentage, it also offers the controlled
+      // discharge: it runs until the charge reaches the 20 % target or until the
+      // 30 min cap (`timeout_s: 1800`), whichever comes first.
       capabilities: {
         battery_test: {
           supported: true,
@@ -185,10 +185,10 @@ export const telemetryOk = {
 };
 
 /**
- * Telemetria do SMS (`sms-1phase`): usa o bloco `data.battery` (percentual
- * informado pelo equipamento, não estimado), `output_frequency_hz` e o quadro de
- * flags com significado próprio (BYPASS/UPSOK). Serve para provar que a interface
- * lê o dado por protocolo, sem renomear campos.
+ * SMS telemetry (`sms-1phase`): uses the `data.battery` block (percentage
+ * reported by the device, not estimated), `output_frequency_hz` and the flags
+ * frame with its own meaning (BYPASS/UPSOK). It serves to prove that the
+ * interface reads the data per protocol, without renaming fields.
  */
 export const telemetrySms = {
   api_version: "v1",
@@ -251,7 +251,7 @@ export const telemetrySms = {
   },
 };
 
-/** Telemetria desatualizada: `data` preservado, `telemetry_valid` falso (HTTP 503). */
+/** Stale telemetry: `data` preserved, `telemetry_valid` false (HTTP 503). */
 export const telemetryStale = {
   ...telemetryOk,
   telemetry_valid: false,
@@ -265,13 +265,13 @@ export const telemetryStale = {
     consecutive_failures: 2,
     last_error: {
       code: "timeout",
-      message: "sem resposta dentro de command_wait_s",
+      message: "no response within command_wait_s",
       at_utc: "2026-10-22T15:22:40.000Z",
     },
   },
 };
 
-/** Coletor ainda sem leitura válida: `data = null` (HTTP 503). */
+/** Collector with no valid reading yet: `data = null` (HTTP 503). */
 export const telemetryNoData = {
   api_version: "v1",
   contract_version: "3.0",
@@ -333,7 +333,7 @@ export const identityOk = {
   communication: telemetryOk.communication,
 };
 
-/** Identificação do SMS (`sms-1phase`). */
+/** SMS identity (`sms-1phase`). */
 export const identitySms = {
   api_version: "v1",
   contract_version: "3.0",
@@ -374,7 +374,7 @@ export const deviceNotFound = {
   contract_version: "3.0",
   error: {
     code: "device_not_found",
-    message: `equipamento 'inexistente' nao esta configurado (disponivel: ${deviceId})`,
+    message: `device 'nonexistent' is not configured (available: ${deviceId})`,
   },
 };
 
@@ -383,18 +383,18 @@ export const methodNotAllowed = {
   contract_version: "3.0",
   error: {
     code: "method_not_allowed",
-    message: "a API e somente de leitura: use GET (nenhum comando e enviado ao nobreak)",
+    message: "the API is read-only: use GET (no command is sent to the UPS)",
   },
 };
 
-// ---------------------------- teste de bateria (3.0) ------------------------
-// Formas baseadas em monitor/docs/integracao-web-viewer.md §11.3 (valores
-// ilustrativos — não são telemetria real). O `test_id` é o mesmo em todo o ciclo
-// (aceite → acompanhamento → histórico) para reproduzir o fluxo assíncrono.
+// ---------------------------- battery test (3.0) ----------------------------
+// Shapes based on monitor/docs/web-viewer-integration.md §11.3 (illustrative
+// values — not real telemetry). The `test_id` is the same throughout the cycle
+// (accept → follow-up → history) to reproduce the asynchronous flow.
 
 export const testId = "9f3c1a7b2d4e5061";
 
-/** `POST .../tests` → 202: pedido enfileirado; NÃO é o resultado do teste. */
+/** `POST .../tests` → 202: request queued; it is NOT the test result. */
 export const testAccept = {
   api_version: "v1",
   contract_version: "3.0",
@@ -412,8 +412,8 @@ export const testAccept = {
 };
 
 /**
- * `GET .../tests/{id}` enquanto `running`: já vem com a série parcial, mas as
- * agregações (`deltas`) e a estimativa ainda são nulas.
+ * `GET .../tests/{id}` while `running`: it already comes with the partial series,
+ * but the aggregations (`deltas`) and the estimate are still null.
  */
 export const testReportRunning = {
   api_version: "v1",
@@ -440,8 +440,8 @@ export const testReportRunning = {
     samples: [
       {
         offset_s: 0.401,
-        // `normalized` é o espelho padronizado entre protocolos: é a base dos
-        // gráficos do quadrante (a chave ausente significaria "sem série").
+        // `normalized` is the standardized mirror across protocols: it is the
+        // basis of the quadrant charts (a missing key would mean "no series").
         normalized: {
           input_voltage_v: 219.0,
           output_voltage_v: 218.0,
@@ -460,8 +460,8 @@ export const testReportRunning = {
 };
 
 /**
- * `GET .../tests/{id}` no fim: relatório completo com a queda de carga, a
- * oscilação das métricas e a autonomia estimada (`confidence: "low"`).
+ * `GET .../tests/{id}` at the end: complete report with the charge drop, the
+ * ripple of the metrics and the estimated runtime (`confidence: "low"`).
  */
 export const testReportCompleted = {
   api_version: "v1",
@@ -540,8 +540,8 @@ export const testReportCompleted = {
     },
     samples_count: 25,
     error: null,
-    // Série reduzida (o contrato publica ~25 pontos): aqui só o suficiente para
-    // exercitar os quatro gráficos do quadrante.
+    // Reduced series (the contract publishes ~25 points): here only enough to
+    // exercise the four quadrant charts.
     samples: [
       {
         offset_s: 0.401,
@@ -593,9 +593,9 @@ export const testReportCompleted = {
 };
 
 /**
- * Segundo tipo de teste (`discharge_20pct`), oferecido apenas onde a API o
- * declara: roda até a carga chegar ao alvo de 20 % **ou** até o teto de 30 min,
- * o que vier primeiro. Aqui terminou pelo alvo, bem antes do teto.
+ * Second test type (`discharge_20pct`), offered only where the API declares it:
+ * it runs until the charge reaches the 20 % target **or** until the 30 min cap,
+ * whichever comes first. Here it ended at the target, well before the cap.
  */
 export const testReportDischarge = {
   api_version: "v1",
@@ -726,7 +726,7 @@ export const testReportDischarge = {
   },
 };
 
-/** `POST .../tests` com `discharge_20pct` → 202 (`target_percent`, sem janela fixa). */
+/** `POST .../tests` with `discharge_20pct` → 202 (`target_percent`, no fixed window). */
 export const testAcceptDischarge = {
   api_version: "v1",
   contract_version: "3.0",
@@ -745,8 +745,8 @@ export const testAcceptDischarge = {
 };
 
 /**
- * Relatório com `estimate.available: false`: a queda ficou abaixo da resolução
- * mensurável. A interface deve mostrar o `reason`, NUNCA um número.
+ * Report with `estimate.available: false`: the drop stayed below the measurable
+ * resolution. The interface must show the `reason`, NEVER a number.
  */
 export const testReportEstimateUnavailable = {
   api_version: "v1",
@@ -784,7 +784,7 @@ export const testReportEstimateUnavailable = {
     },
     estimate: {
       available: false,
-      reason: "queda de carga abaixo da resolucao mensuravel",
+      reason: "charge drop below the measurable resolution",
       confidence: "low",
     },
     samples_count: 25,
@@ -792,7 +792,7 @@ export const testReportEstimateUnavailable = {
   },
 };
 
-/** `POST .../tests/{id}/abort` → 202: o relatório passará a `aborted`. */
+/** `POST .../tests/{id}/abort` → 202: the report will move to `aborted`. */
 export const testAbort = {
   api_version: "v1",
   contract_version: "3.0",
@@ -801,7 +801,7 @@ export const testAbort = {
   status: "aborting",
 };
 
-/** `GET .../tests?limit=N` → 200: histórico sem a série de amostras. */
+/** `GET .../tests?limit=N` → 200: history without the sample series. */
 export const testsListOk = {
   api_version: "v1",
   contract_version: "3.0",
@@ -824,22 +824,22 @@ export const testsListOk = {
   ],
 };
 
-/** Recusa típica do `POST .../tests`: 409 `test_cooldown`. */
+/** Typical refusal of `POST .../tests`: 409 `test_cooldown`. */
 export const testCooldownError = {
   api_version: "v1",
   contract_version: "3.0",
   error: {
     code: "test_cooldown",
-    message: "aguarde o cooldown entre testes (300 s)",
+    message: "wait for the cooldown between tests (300 s)",
   },
 };
 
-/** Recusa do teste desabilitado: 403 `test_disabled` (TS Shara por padrão). */
+/** Refusal of the disabled test: 403 `test_disabled` (TS Shara by default). */
 export const testDisabledError = {
   api_version: "v1",
   contract_version: "3.0",
   error: {
     code: "test_disabled",
-    message: "teste de bateria nao esta habilitado neste equipamento",
+    message: "the battery test is not enabled on this device",
   },
 };

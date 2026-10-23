@@ -1,24 +1,25 @@
 /**
- * Bloco B do quadrante de Teste de Bateria: os gráficos da linha do tempo.
+ * Block B of the Battery Test quadrant: the timeline charts.
  *
- * A barra lateral esquerda lista as quatro métricas como blocos selecionáveis
- * (tensão de saída, frequência, temperatura interna e carga da bateria) e a área
- * à direita desenha a série escolhida. Cada bloco já resume a oscilação da
- * própria métrica vinda de `deltas.metrics`, para que o usuário veja o número
- * sem precisar trocar de gráfico.
+ * The left side bar lists the four metrics as selectable blocks (output
+ * voltage, frequency, internal temperature and battery charge) and the area on
+ * the right draws the chosen series. Each block already summarizes the
+ * oscillation of its own metric coming from `deltas.metrics`, so the user sees
+ * the number without having to switch charts.
  *
- * Os pontos vêm de `samples[].normalized` (espelho padronizado entre
- * protocolos): chave AUSENTE significa "série indisponível para este
- * equipamento" e nunca é desenhada como uma linha reta em zero.
+ * The points come from `samples[].normalized` (the standardized mirror across
+ * protocols): an ABSENT key means "series unavailable for this device" and is
+ * never drawn as a straight line at zero.
  *
- * O desenho é SVG próprio (sem biblioteca de gráficos), com a geometria pura em
- * `model/batteryTest.ts` — a componente só projeta os números na tela.
+ * The drawing is its own SVG (no chart library), with the pure geometry in
+ * `model/batteryTest.ts` — the component only projects the numbers onto the
+ * screen.
  */
 import { useState } from "react";
 
 import { buildLineChart, type TestChartModel } from "../model/batteryTest.js";
 
-/** Sistema de coordenadas do SVG; a escala visual fica por conta do CSS. */
+/** SVG coordinate system; the visual scale is handled by CSS. */
 const CHART_WIDTH = 720;
 const CHART_HEIGHT = 260;
 
@@ -27,8 +28,8 @@ export interface BatteryTestChartsProps {
 }
 
 export function BatteryTestCharts({ models }: BatteryTestChartsProps) {
-  // Chave vazia cai no primeiro bloco; a seleção é derivada, então trocar de
-  // equipamento (ou de teste) nunca deixa um bloco órfão selecionado.
+  // An empty key falls back to the first block; the selection is derived, so
+  // switching device (or test) never leaves an orphan block selected.
   const [selectedKey, setSelectedKey] = useState("");
   const selected = models.find((model) => model.key === selectedKey) ?? models[0] ?? null;
 
@@ -43,7 +44,7 @@ export function BatteryTestCharts({ models }: BatteryTestChartsProps) {
 
   return (
     <div className="bt-charts">
-      <ul className="bt-charts__list" aria-label="Métricas do teste de bateria">
+      <ul className="bt-charts__list" aria-label="Battery test metrics">
         {models.map((model) => {
           const active = model.key === selected.key;
           return (
@@ -56,7 +57,7 @@ export function BatteryTestCharts({ models }: BatteryTestChartsProps) {
               >
                 <span className="bt-charts__block-label">{model.label}</span>
                 <span className="bt-charts__block-value">
-                  {model.available ? model.variationText : "série indisponível"}
+                  {model.available ? model.variationText : "series unavailable"}
                 </span>
               </button>
             </li>
@@ -75,7 +76,7 @@ export function BatteryTestCharts({ models }: BatteryTestChartsProps) {
             className="bt-charts__svg"
             viewBox={`0 0 ${geometry.width} ${geometry.height}`}
             role="img"
-            aria-label={`${selected.label} em ${selected.unit} ao longo do teste de bateria`}
+            aria-label={`${selected.label} in ${selected.unit} over the battery test`}
           >
             {geometry.yTicks.map((tick) => (
               <g key={`y-${tick.pos.toFixed(1)}`}>
@@ -104,7 +105,7 @@ export function BatteryTestCharts({ models }: BatteryTestChartsProps) {
               </text>
             ))}
 
-            {/* Linha de referência (alvo do teste de descarga); tracejada, sem valor inventado. */}
+            {/* Reference line (target of the discharge test); dashed, with no invented value. */}
             {geometry.referencePos !== null ? (
               <>
                 <line
@@ -129,8 +130,8 @@ export function BatteryTestCharts({ models }: BatteryTestChartsProps) {
           </svg>
         ) : (
           <p className="bt-charts__unavailable">
-            Série indisponível: o equipamento não publicou {selected.label} nesta janela de teste. O
-            painel não desenha zero no lugar do dado ausente.
+            Series unavailable: the device did not publish {selected.label} in this test window. The
+            panel does not draw zero in place of the missing data.
           </p>
         )}
       </figure>

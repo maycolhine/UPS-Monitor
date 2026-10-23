@@ -1,9 +1,9 @@
 /**
- * Geometria dos gauges semicirculares e avaliação das faixas semânticas.
- * Tudo aqui é função pura (testável sem navegador).
+ * Geometry of the semicircular gauges and evaluation of the semantic bands.
+ * Everything here is a pure function (testable without a browser).
  *
- * Semântica: vermelho = ruim/crítico, âmbar = atenção, verde = normal.
- * A cor nunca é o único sinal: cada faixa carrega um rótulo textual.
+ * Semantics: red = bad/critical, amber = warning, green = normal.
+ * Color is never the only signal: every band carries a textual label.
  */
 import type { GaugeBand, GaugeDefinition, GaugeSource } from "./contract.js";
 import { formatNumber } from "./format.js";
@@ -12,43 +12,43 @@ export type MetricLevel = "good" | "warning" | "critical" | "unknown";
 
 export const LEVEL_LABEL: Record<MetricLevel, string> = {
   good: "Normal",
-  warning: "Atenção",
-  critical: "Crítico",
-  unknown: "Sem dados",
+  warning: "Warning",
+  critical: "Critical",
+  unknown: "No data",
 };
 
 export interface BandEvaluation {
   level: MetricLevel;
-  /** Rótulo textual da faixa (não depende de cor para comunicar o estado). */
+  /** Textual label of the band (does not rely on color to convey the state). */
   text: string;
   band: GaugeBand | null;
 }
 
 /**
- * Localiza a faixa que contém o valor.
+ * Locates the band that contains the value.
  *
- * Convenção dos limites: o valor exatamente igual a um limite pertence à faixa
- * que TERMINA nesse limite — é assim que as faixas são descritas ao usuário
- * ("verde entre 57 e 60", "verde entre 0 e 50"). Assim um valor nominal como
- * 60,0 Hz ou 127,0 V é classificado como normal, e não como atenção.
+ * Boundary convention: a value exactly equal to a boundary belongs to the band
+ * that ENDS at that boundary — that is how the bands are described to the user
+ * ("green between 57 and 60", "green between 0 and 50"). Thus a nominal value
+ * such as 60.0 Hz or 127.0 V is classified as normal, not as warning.
  */
 export function evaluateBand(value: number | null | undefined, bands: GaugeBand[]): BandEvaluation {
   if (value === null || value === undefined || !Number.isFinite(value) || bands.length === 0) {
-    return { level: "unknown", text: "Sem dados", band: null };
+    return { level: "unknown", text: "No data", band: null };
   }
   for (const band of bands) {
     if (value >= band.from && value <= band.to) {
       return { level: band.level, text: band.label, band };
     }
   }
-  return { level: "unknown", text: "Fora da escala exibida", band: null };
+  return { level: "unknown", text: "Outside the displayed scale", band: null };
 }
 
 /**
- * Limites das faixas (início e fim de cada faixa), em ordem crescente e sem
- * repetições. É o que o gauge marca na escala, em vez de marcações fixas:
- * mostra onde cada faixa começa e termina (escopo §4.2 — a cor nunca é o único
- * sinal; o usuário precisa conseguir ler os limites).
+ * Band boundaries (start and end of each band), in ascending order and without
+ * repetitions. This is what the gauge marks on the scale, instead of fixed
+ * marks: it shows where each band starts and ends (scope §4.2 — color is never
+ * the only signal; the user must be able to read the boundaries).
  */
 export function bandBoundaries(bands: GaugeBand[]): number[] {
   const values = new Set<number>();
@@ -59,14 +59,14 @@ export function bandBoundaries(bands: GaugeBand[]): number[] {
   return [...values].sort((a, b) => a - b);
 }
 
-/** Fração de 0 a 1 do valor dentro da escala. */
+/** Fraction from 0 to 1 of the value within the scale. */
 export function valueFraction(value: number, min: number, max: number): number {
   if (!(max > min)) return 0;
   const fraction = (value - min) / (max - min);
   return Math.min(1, Math.max(0, fraction));
 }
 
-/** Ângulo em graus: 180° na extremidade esquerda, 0° na direita. */
+/** Angle in degrees: 180° at the left end, 0° at the right. */
 export function valueAngle(value: number, min: number, max: number): number {
   return 180 - 180 * valueFraction(value, min, max);
 }
@@ -91,7 +91,7 @@ export interface ArcGeometry {
   strokeWidth: number;
 }
 
-/** Caminho SVG para um arco entre dois valores da escala. */
+/** SVG path for an arc between two values of the scale. */
 export function arcPath(
   from: number,
   to: number,
@@ -107,7 +107,7 @@ export function arcPath(
   return `M ${round(start.x)} ${round(start.y)} A ${geometry.radius} ${geometry.radius} 0 ${largeArc} ${sweep} ${round(end.x)} ${round(end.y)}`;
 }
 
-/** Geometria do ponteiro na posição do valor. */
+/** Geometry of the needle at the value position. */
 export function needlePoint(
   value: number,
   scale: { min: number; max: number },
@@ -130,7 +130,7 @@ export interface GaugeGeometry {
   needleLength: number;
 }
 
-/** Geometria padrão do semicírculo (mesma para todos os gauges). */
+/** Default geometry of the semicircle (the same for all gauges). */
 export const GAUGE_GEOMETRY: GaugeGeometry = {
   width: 220,
   height: 132,
@@ -142,39 +142,39 @@ export const GAUGE_GEOMETRY: GaugeGeometry = {
 
 export interface GaugeRenderModel {
   definition: GaugeDefinition;
-  /** Origem efetivamente usada (define rótulo e selo exibidos). */
+  /** Source actually used (defines the displayed label and badge). */
   source: GaugeSource | null;
-  /** Rótulo da métrica na origem usada (padrão: o da definição). */
+  /** Label of the metric on the used source (default: the one from the definition). */
   label: string;
   value: number | null;
   hasValue: boolean;
   displayValue: string;
   level: MetricLevel;
   statusText: string;
-  /** true quando o valor é exibido, mas fora de validade (leitura desatualizada). */
+  /** true when the value is displayed but out of date (stale reading). */
   stale: boolean;
-  /** Texto de ausência: "Sem dados" ou "Desatualizado". */
+  /** Absence text: "No data" or "Stale". */
   emptyText: string | null;
   ariaLabel: string;
 }
 
 export interface BuildGaugeModelInput {
   definition: GaugeDefinition;
-  /** Valor já extraído do contrato (`null` = informado como nulo, `undefined` = ausente). */
+  /** Value already extracted from the contract (`null` = reported as null, `undefined` = absent). */
   value: number | null | undefined;
-  /** Telemetria da API marcada como desatualizada. */
+  /** Telemetry from the API marked as out of date. */
   stale: boolean;
-  /** Origem escolhida para este payload (ver `resolveGaugeSource`). */
+  /** Source chosen for this payload (see `resolveGaugeSource`). */
   source?: GaugeSource | null;
 }
 
 /**
- * Monta o modelo visual de um gauge.
+ * Builds the visual model of a gauge.
  *
- * Regras do escopo §6.2: valor ausente/inválido NUNCA vira zero. Quando não há
- * número utilizável, o gauge é neutralizado e recebe o texto "Sem dados".
- * Quando a leitura existe mas está desatualizada, o número é mostrado com o
- * rótulo "Desatualizado" — nunca como se fosse atual.
+ * Scope rules §6.2: a missing/invalid value NEVER becomes zero. When there is
+ * no usable number, the gauge is neutralized and receives the text "No data".
+ * When the reading exists but is out of date, the number is shown with the
+ * label "Stale" — never as if it were current.
  */
 export function buildGaugeRenderModel(input: BuildGaugeModelInput): GaugeRenderModel {
   const { definition, stale } = input;
@@ -183,7 +183,7 @@ export function buildGaugeRenderModel(input: BuildGaugeModelInput): GaugeRenderM
   const usable = typeof input.value === "number" && Number.isFinite(input.value);
 
   if (!usable) {
-    const emptyText = stale ? "Desatualizado" : "Sem dados";
+    const emptyText = stale ? "Stale" : "No data";
     return {
       definition,
       source,
@@ -202,7 +202,7 @@ export function buildGaugeRenderModel(input: BuildGaugeModelInput): GaugeRenderM
   const value = input.value as number;
   const bandEvaluation = evaluateBand(value, definition.bands);
   const displayValue = formatNumber(value, definition.decimals);
-  const statusText = stale ? "Desatualizado" : bandEvaluation.text;
+  const statusText = stale ? "Stale" : bandEvaluation.text;
 
   return {
     definition,
@@ -214,19 +214,19 @@ export function buildGaugeRenderModel(input: BuildGaugeModelInput): GaugeRenderM
     level: bandEvaluation.level,
     statusText,
     stale,
-    emptyText: stale ? "Desatualizado" : null,
+    emptyText: stale ? "Stale" : null,
     ariaLabel: `${label}: ${displayValue} ${definition.unit} — ${statusText}`,
   };
 }
 
 /**
- * Lê um valor por um caminho do payload de telemetria (caminho exato do
- * contrato, sem renomear campos).
+ * Reads a value by a path of the telemetry payload (exact contract path,
+ * without renaming fields).
  *
- * Retorna:
- *  - `number`   → valor utilizável;
- *  - `null`     → o contrato informou `null` explicitamente;
- *  - `undefined`→ caminho ausente ou tipo inesperado (nunca tratado como zero).
+ * Returns:
+ *  - `number`   → usable value;
+ *  - `null`     → the contract explicitly reported `null`;
+ *  - `undefined`→ absent path or unexpected type (never treated as zero).
  */
 export function readMetricPath(payload: unknown, sourcePath: string): number | null | undefined {
   let current: unknown = payload;
@@ -241,21 +241,21 @@ export function readMetricPath(payload: unknown, sourcePath: string): number | n
 }
 
 export interface ResolvedGaugeSource {
-  /** Origem efetivamente escolhida (define rótulo e selo exibidos). */
+  /** Source actually chosen (defines the displayed label and badge). */
   source: GaugeSource | null;
-  /** Valor lido no caminho dessa origem (`undefined` = ausente, `null` = nulo informado). */
+  /** Value read on the path of that source (`undefined` = absent, `null` = explicitly null). */
   value: number | null | undefined;
 }
 
 /**
- * Escolhe a origem do gauge para o payload recebido.
+ * Chooses the gauge source for the received payload.
  *
- * O mesmo dado aparece em campos diferentes conforme o PROTOCOLO do equipamento
- * (contrato 2.0 é multiprotocolo). Por isso a definição lista `sources` em ordem
- * de preferência e esta função devolve a PRIMEIRA cujo caminho esteja presente
- * no payload — seja número ou `null` explícito. Se nenhum caminho existir,
- * devolve a primeira origem como referência (o valor fica ausente e o gauge
- * exibe "Sem dados", nunca zero).
+ * The same data appears in different fields depending on the equipment PROTOCOL
+ * (contract 2.0 is multiprotocol). That is why the definition lists `sources`
+ * in order of preference and this function returns the FIRST one whose path is
+ * present in the payload — whether a number or an explicit `null`. If no path
+ * exists, it returns the first source as a reference (the value stays absent and
+ * the gauge shows "No data", never zero).
  */
 export function resolveGaugeSource(
   definition: GaugeDefinition,

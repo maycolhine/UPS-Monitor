@@ -1,0 +1,53 @@
+# Example systemd unit for the REST API of the SMS Power Sinus NG uPS3200S UPS (v2.0).
+#
+# Automated installation (recommended):
+#   sudo scripts/install_service.sh
+#
+# Manual installation:
+#   sudo install -m 0644 config/examples/sms-api.service /etc/systemd/system/
+#   sudo install -d /etc/sms-api
+#   sudo install -m 0640 config/examples/sms_api.conf /etc/sms-api/sms_api.conf
+#   sudo install -m 0644 config/examples/99-sms-ups.rules /etc/udev/rules.d/
+#   sudo systemctl daemon-reload && sudo udevadm control --reload-rules && sudo udevadm trigger
+#   sudo systemctl enable --now sms-api
+#   journalctl -u sms-api -f
+#
+# Note: the project path contains spaces. A unit file does NOT use quotes
+# (systemd reads the whole value up to the end of the line); in URLs, the space goes as %%20
+# (the % sign is escaped as %% in unit files).
+# Adjust WorkingDirectory/ExecStart and User according to the host (the installer does this itself).
+#
+# USB disconnected: the service does NOT stop. The collector keeps retrying every
+# poll_interval_s and the API keeps answering -- /health = 503 "degraded" and
+# /telemetry = 503 with communication.state = port_unavailable/disconnected and
+# last_error filled in (no fake values). When the cable is reconnected, the udev
+# rule (config/examples/99-sms-ups.rules) restarts the service to reopen the
+# port immediately.
+
+[Unit]
+Description=REST telemetry API for the SMS Power Sinus NG uPS3200S UPS (1Phase protocol over USB-Serial)
+Documentation=file:/opt/UPS%%20Monitor/SMS/Power_Sinus_NG_uPS3200S/docs/rest-api.md
+After=network-online.target
+Wants=network-online.target
+# no restart limit: an absent cable at boot must not exhaust the attempts
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+# the user must belong to the dialout group to access /dev/ttyUSB0
+User=upsmon
+Group=dialout
+WorkingDirectory=/opt/UPS Monitor/SMS/Power_Sinus_NG_uPS3200S
+ExecStart=/usr/bin/python3 -m api --config /etc/sms-api/sms_api.conf
+# always restart (drop, unhandled exception, HTTP IP/port unavailable at boot)
+Restart=always
+RestartSec=5
+# no additional privileges; read-only service
+NoNewPrivileges=true
+PrivateTmp=true
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sms-api
+
+[Install]
+WantedBy=multi-user.target

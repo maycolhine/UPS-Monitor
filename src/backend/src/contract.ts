@@ -1,21 +1,21 @@
 /**
- * Contrato da API de telemetria (v1 / contract_version 3.0) — leitura, validação e
- * normalização.
+ * Telemetry API contract (v1 / contract_version 3.0) — reading, validation and
+ * normalization.
  *
- * Regras aplicadas aqui (ver docs/contrato-api.md e docs/decisoes-tecnicas.md):
- *  1. Nenhum campo é renomeado: os nomes da API são preservados literalmente.
- *  2. `null` é preservado como `null`; nunca é convertido em 0 nem em valor fictício.
- *  3. Campo ausente continua ausente (não é criado com valor padrão).
- *  4. Divergências em relação ao documentado viram `problems` e são reportadas
- *     na resposta do Web Viewer (`viewer.warnings`), sem adaptação silenciosa.
- *  5. Campos extras (de outras marcas/modelos) são preservados no payload original.
- *  6. O contrato 3.0 acrescenta o teste de bateria: `capabilities.battery_test` na
- *     lista de equipamentos e o relatório de previsibilidade. A leitura continua
- *     idêntica; a única escrita é `POST .../tests` (ver `apiClient`/`dashboard`).
+ * Rules applied here (see docs/api-contract.md and docs/technical-decisions.md):
+ *  1. No field is renamed: the API names are preserved literally.
+ *  2. `null` is preserved as `null`; it is never converted to 0 nor to a fictitious value.
+ *  3. A missing field stays missing (it is not created with a default value).
+ *  4. Divergences from what is documented become `problems` and are reported
+ *     in the Web Viewer response (`viewer.warnings`), without silent adaptation.
+ *  5. Extra fields (from other brands/models) are preserved in the original payload.
+ *  6. Contract 3.0 adds the battery test: `capabilities.battery_test` in the
+ *     equipment list and the predictability report. Reading remains
+ *     identical; the only write is `POST .../tests` (see `apiClient`/`dashboard`).
  */
 
 export const EXPECTED_API_VERSION = "v1";
-/** Revisão do contrato publicada pela API unificada multidispositivo. */
+/** Contract revision published by the unified multi-device API. */
 export const EXPECTED_CONTRACT_VERSION = "3.0";
 
 export type UnknownRecord = Record<string, unknown>;
@@ -41,7 +41,7 @@ export interface CommunicationLastError {
   at_utc?: string | null;
 }
 
-/** Metadados da coleta: `communication` no contrato. */
+/** Collection metadata: `communication` in the contract. */
 export interface CommunicationState {
   state: string;
   telemetry_valid?: boolean;
@@ -66,10 +66,10 @@ export interface BatteryCharge {
 }
 
 /**
- * Bloco de bateria do protocolo `sms-1phase`: o percentual é **informado pelo
- * equipamento** (`charge_source: reported_by_device`) e a tensão é **derivada**
- * (`nominal × percentual / 100`). Não é estimativa por interpolação — por isso
- * não leva a marca de "estimativa" na interface.
+ * Battery block of the `sms-1phase` protocol: the percentage is **reported by the
+ * device** (`charge_source: reported_by_device`) and the voltage is **derived**
+ * (`nominal × percentage / 100`). It is not an estimate by interpolation — that is why
+ * it does not carry the "estimate" mark in the interface.
  */
 export interface BatteryReported {
   charge_percent: number | null;
@@ -82,7 +82,7 @@ export interface BatteryReported {
 
 export interface StatusBlock {
   raw_bits?: string;
-  /** SMS publica também o byte de estado em decimal. */
+  /** SMS also publishes the state byte in decimal. */
   raw_byte?: number;
   active?: string[];
   flags?: Record<string, boolean>;
@@ -91,7 +91,7 @@ export interface StatusBlock {
 export interface TelemetryData {
   captured_at_utc?: string | null;
   source?: string;
-  /** Medições com os nomes e unidades da API (`input_voltage_v`, `load_percent`, ...). */
+  /** Measurements with the API names and units (`input_voltage_v`, `load_percent`, ...). */
   measurements: Record<string, number | null>;
   battery_charge?: BatteryCharge;
   battery?: BatteryReported;
@@ -140,31 +140,31 @@ export interface IdentityPayload {
 }
 
 /**
- * Parâmetros de UM tipo de teste, publicados em
- * `capabilities.battery_test.types.<type>`. É o que distingue o teste de janela
- * (`duration_s`) do teste por alvo (`target_percent` + `timeout_s`).
+ * Parameters of ONE test type, published at
+ * `capabilities.battery_test.types.<type>`. It is what distinguishes the window test
+ * (`duration_s`) from the target test (`target_percent` + `timeout_s`).
  */
 export interface BatteryTestTypeParams {
-  /** Janela do teste; `null` no teste por alvo (sem janela). */
+  /** Test window; `null` in the target test (no window). */
   duration_s?: number | null;
-  /** Alvo de carga do teste de descarga (ex.: 20 %); `null` no teste de janela. */
+  /** Charge target of the discharge test (e.g.: 20 %); `null` in the window test. */
   target_percent?: number | null;
-  /** Teto de segurança: quando o teste para de qualquer forma. */
+  /** Safety cap: when the test stops regardless. */
   timeout_s?: number | null;
   sample_interval_s?: number | null;
 }
 
 /**
- * Contrato de descoberta do teste de bateria (contrato 3.0). `enabled` decide se
- * o botão pode ser exibido; `abort_supported` se existe o cancelamento; os
- * demais campos são os parâmetros efetivos do dispositivo.
+ * Battery test discovery contract (contract 3.0). `enabled` decides whether
+ * the button may be shown; `abort_supported` whether cancellation exists; the
+ * remaining fields are the device's effective parameters.
  */
 export interface BatteryTestCapabilities {
   supported?: boolean;
   enabled?: boolean;
-  /** Tipos aceitos por ESTE equipamento (`duration_10s`, `discharge_20pct`, ...). */
+  /** Types accepted by THIS device (`duration_10s`, `discharge_20pct`, ...). */
   test_types?: string[];
-  /** Detalhe por tipo — a interface não inventa parâmetros ausentes. */
+  /** Detail per type — the interface does not invent missing parameters. */
   types?: Record<string, BatteryTestTypeParams>;
   duration_s?: number | null;
   sample_interval_s?: number | null;
@@ -198,7 +198,7 @@ export interface DevicesPayload {
   devices: DeviceEntry[];
 }
 
-/** Disponibilidade de UM equipamento dentro de `GET /health` (contrato 2.0). */
+/** Availability of ONE device inside `GET /health` (contract 2.0). */
 export interface HealthDeviceStatus {
   telemetry_valid?: boolean;
   stale?: boolean;
@@ -213,9 +213,9 @@ export interface HealthDeviceStatus {
 }
 
 /**
- * `GET /health` do contrato 2.0 é **agregado**: publica um resumo por
- * `device_id` em `devices` (os campos `device_id`, `checks` e `collector` do
- * contrato 1.0 desapareceram).
+ * `GET /health` of contract 2.0 is **aggregated**: it publishes a summary per
+ * `device_id` in `devices` (the fields `device_id`, `checks` and `collector` of
+ * contract 1.0 have disappeared).
  */
 export interface HealthPayload {
   api_version: string;
@@ -228,9 +228,9 @@ export interface HealthPayload {
   devices?: Record<string, HealthDeviceStatus>;
 }
 
-// ------------------------ teste de bateria (contrato 3.0) -------------------
+// ------------------------ battery test (contract 3.0) ------------------------
 
-/** Aceite do pedido de teste (`POST .../tests` → 202; execução assíncrona). */
+/** Acceptance of the test request (`POST .../tests` → 202; asynchronous execution). */
 export interface BatteryTestAccept {
   accepted_at_utc?: string | null;
   poll_interval_s?: number | null;
@@ -241,22 +241,22 @@ export interface BatteryTestAccept {
   started_at_utc?: string | null;
   expected_end_at_utc?: string | null;
   requested_duration_s?: number | null;
-  /** Alvo de carga do teste de descarga; `null` no teste de janela. */
+  /** Charge target of the discharge test; `null` in the window test. */
   target_percent?: number | null;
-  /** Teto de segurança do teste (`timeout_s`). */
+  /** Safety cap of the test (`timeout_s`). */
   timeout_s?: number | null;
   sample_interval_s?: number | null;
   report_url?: string | null;
 }
 
-/** Resposta do cancelamento (`POST .../tests/{id}/abort` → 202). */
+/** Cancellation response (`POST .../tests/{id}/abort` → 202). */
 export interface BatteryTestAbort {
   test_id: string;
   device_id: string;
   status: string;
 }
 
-/** Agregação por métrica dentro do relatório (`deltas.metrics`). */
+/** Aggregation per metric inside the report (`deltas.metrics`). */
 export interface BatteryTestMetricDelta {
   start?: number | null;
   end?: number | null;
@@ -269,9 +269,9 @@ export interface BatteryTestMetricDelta {
 }
 
 /**
- * Estimativa de autonomia: extrapolação linear de 1ª ordem, sempre
- * `confidence: "low"`. Quando `available` é `false`, o campo `reason` explica —
- * a interface NUNCA converte isso em número.
+ * Runtime estimate: linear first-order extrapolation, always
+ * `confidence: "low"`. When `available` is `false`, the `reason` field explains —
+ * the interface NEVER converts this into a number.
  */
 export interface BatteryTestEstimate {
   available: boolean;
@@ -287,12 +287,12 @@ export interface BatteryTestEstimate {
 }
 
 /**
- * Uma amostra da linha do tempo (`test.samples[]`).
+ * One sample of the timeline (`test.samples[]`).
  *
- * `normalized` é o espelho padronizado das métricas (mesmos nomes nos dois
- * protocolos) e é a ÚNICA base dos gráficos: `measurements` mantém os nomes
- * crus de cada protocolo. Chave ausente em `normalized` significa "série
- * indisponível neste equipamento" — nunca zero.
+ * `normalized` is the standardized mirror of the metrics (same names in both
+ * protocols) and is the ONLY basis for the charts: `measurements` keeps the raw
+ * names of each protocol. A missing key in `normalized` means "series
+ * unavailable on this device" — never zero.
  */
 export interface BatteryTestSample {
   offset_s?: number | null;
@@ -302,7 +302,7 @@ export interface BatteryTestSample {
   battery?: { charge_percent?: number | null; voltage_v?: number | null };
 }
 
-/** Relatório completo de um teste (parcial enquanto `status = "running"`). */
+/** Complete report of a test (partial while `status = "running"`). */
 export interface BatteryTestReport {
   test_id: string;
   device_id?: string;
@@ -314,12 +314,12 @@ export interface BatteryTestReport {
   requested_duration_s?: number | null;
   duration_s?: number | null;
   sample_interval_s?: number | null;
-  /** Alvo de carga do teste de descarga; `null` no teste de janela. */
+  /** Charge target of the discharge test; `null` in the window test. */
   target_percent?: number | null;
-  /** Teto de segurança do teste; `null` quando a API não o publica. */
+  /** Safety cap of the test; `null` when the API does not publish it. */
   timeout_s?: number | null;
   finish_reason?: string | null;
-  /** `true` se o nobreak ligou a flag `TEST` (confirma que o teste ocorreu). */
+  /** `true` if the UPS set the `TEST` flag (confirms that the test occurred). */
   test_flag_observed?: boolean;
   flags_seen?: string[];
   baseline?: Record<string, number | null>;
@@ -350,7 +350,7 @@ export interface BatteryTestListItem {
   error?: ContractError | null;
 }
 
-/** Histórico (`GET .../tests?limit=N`): sem a série de amostras. */
+/** History (`GET .../tests?limit=N`): without the sample series. */
 export interface TestsListPayload {
   api_version: string;
   contract_version: string;
@@ -359,7 +359,7 @@ export interface TestsListPayload {
   tests: BatteryTestListItem[];
 }
 
-// ------------------------------- utilidades ---------------------------------
+// ------------------------------- utilities ----------------------------------
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -385,23 +385,23 @@ function optionalString(value: unknown): string | null | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
-/** Valida o envelope comum (`api_version`, `contract_version`). */
+/** Validates the common envelope (`api_version`, `contract_version`). */
 function envelope(source: UnknownRecord, problems: string[]): boolean {
   let ok = true;
   if (!hasString(source, "api_version")) {
-    problems.push("contrato divergente: 'api_version' ausente ou não textual");
+    problems.push("contract mismatch: 'api_version' missing or not textual");
     ok = false;
   } else if (source["api_version"] !== EXPECTED_API_VERSION) {
     problems.push(
-      `contrato divergente: api_version recebida '${String(source["api_version"])}' (esperado '${EXPECTED_API_VERSION}')`,
+      `contract mismatch: api_version received '${String(source["api_version"])}' (expected '${EXPECTED_API_VERSION}')`,
     );
   }
   if (!hasString(source, "contract_version")) {
-    problems.push("contrato divergente: 'contract_version' ausente ou não textual");
+    problems.push("contract mismatch: 'contract_version' missing or not textual");
     ok = false;
   } else if (source["contract_version"] !== EXPECTED_CONTRACT_VERSION) {
     problems.push(
-      `contrato divergente: contract_version recebida '${String(source["contract_version"])}' (esperado '${EXPECTED_CONTRACT_VERSION}')`,
+      `contract mismatch: contract_version received '${String(source["contract_version"])}' (expected '${EXPECTED_CONTRACT_VERSION}')`,
     );
   }
   return ok;
@@ -409,12 +409,12 @@ function envelope(source: UnknownRecord, problems: string[]): boolean {
 
 function parseCommunication(value: unknown, problems: string[]): CommunicationState | null {
   if (!isRecord(value)) {
-    problems.push("contrato divergente: 'communication' ausente ou não é objeto");
+    problems.push("contract mismatch: 'communication' missing or not an object");
     return null;
   }
   const state = value["state"];
   if (typeof state !== "string") {
-    problems.push("contrato divergente: 'communication.state' ausente");
+    problems.push("contract mismatch: 'communication.state' missing");
     return null;
   }
   const lastErrorRaw = value["last_error"];
@@ -426,7 +426,7 @@ function parseCommunication(value: unknown, problems: string[]): CommunicationSt
       ...(typeof lastErrorRaw["at_utc"] === "string" ? { at_utc: lastErrorRaw["at_utc"] } : {}),
     };
   } else if (lastErrorRaw !== null && lastErrorRaw !== undefined) {
-    problems.push("contrato divergente: 'communication.last_error' não é objeto nem null");
+    problems.push("contract mismatch: 'communication.last_error' is neither an object nor null");
   }
 
   const result: CommunicationState = { state };
@@ -460,14 +460,14 @@ function parseCommunication(value: unknown, problems: string[]): CommunicationSt
 function parseMeasurements(value: unknown, problems: string[]): Record<string, number | null> {
   const measurements: Record<string, number | null> = {};
   if (!isRecord(value)) {
-    problems.push("contrato divergente: 'data.measurements' ausente ou não é objeto");
+    problems.push("contract mismatch: 'data.measurements' missing or not an object");
     return measurements;
   }
   for (const [key, raw] of Object.entries(value)) {
     if (raw === null || typeof raw === "number") {
       measurements[key] = asNumber(raw);
     } else {
-      problems.push(`medida '${key}' com tipo inesperado (${typeof raw}); ignorada`);
+      problems.push(`measurement '${key}' with unexpected type (${typeof raw}); ignored`);
     }
   }
   return measurements;
@@ -477,14 +477,14 @@ function parseMeasurements(value: unknown, problems: string[]): Record<string, n
 export function parseErrorPayload(payload: unknown): Parsed<ErrorPayload> {
   const problems: string[] = [];
   if (!isRecord(payload)) {
-    return { ok: false, problems: ["resposta de erro não é um objeto JSON"], raw: {} };
+    return { ok: false, problems: ["error response is not a JSON object"], raw: {} };
   }
   envelope(payload, problems);
   const error = payload["error"];
   if (!isRecord(error) || typeof error["code"] !== "string") {
     return {
       ok: false,
-      problems: [...problems, "resposta de erro sem 'error.code'"],
+      problems: [...problems, "error response without 'error.code'"],
       raw: payload,
     };
   }
@@ -506,13 +506,13 @@ export function parseErrorPayload(payload: unknown): Parsed<ErrorPayload> {
 export function parseTelemetry(payload: unknown): Parsed<TelemetryPayload> {
   const problems: string[] = [];
   if (!isRecord(payload)) {
-    return { ok: false, problems: ["telemetria: resposta não é um objeto JSON"], raw: {} };
+    return { ok: false, problems: ["telemetry: response is not a JSON object"], raw: {} };
   }
   if (!envelope(payload, problems)) {
     return { ok: false, problems, raw: payload };
   }
   if (typeof payload["device_id"] !== "string") {
-    return { ok: false, problems: [...problems, "telemetria sem 'device_id'"], raw: payload };
+    return { ok: false, problems: [...problems, "telemetry without 'device_id'"], raw: payload };
   }
   const communication = parseCommunication(payload["communication"], problems);
 
@@ -520,10 +520,10 @@ export function parseTelemetry(payload: unknown): Parsed<TelemetryPayload> {
   let data: TelemetryData | null = null;
   if (dataRaw === null || dataRaw === undefined) {
     if (payload["data_available"] === true) {
-      problems.push("contrato divergente: 'data_available' true com 'data' nulo");
+      problems.push("contract mismatch: 'data_available' true with null 'data'");
     }
   } else if (!isRecord(dataRaw)) {
-    problems.push("contrato divergente: 'data' não é objeto nem null");
+    problems.push("contract mismatch: 'data' is neither an object nor null");
   } else {
     data = {
       measurements: parseMeasurements(dataRaw["measurements"], problems),
@@ -551,10 +551,10 @@ export function parseTelemetry(payload: unknown): Parsed<TelemetryPayload> {
       }
       data.battery_charge = charge;
     } else if (chargeRaw !== undefined) {
-      problems.push("contrato divergente: 'data.battery_charge' não é objeto");
+      problems.push("contract mismatch: 'data.battery_charge' is not an object");
     }
 
-    // Bloco de bateria do SMS (percentual informado pelo equipamento).
+    // SMS battery block (percentage reported by the device).
     const batteryRaw = dataRaw["battery"];
     if (isRecord(batteryRaw)) {
       const battery: BatteryReported = { charge_percent: asNumber(batteryRaw["charge_percent"]) };
@@ -572,7 +572,7 @@ export function parseTelemetry(payload: unknown): Parsed<TelemetryPayload> {
       if (packs !== undefined) battery.packs = packs;
       data.battery = battery;
     } else if (batteryRaw !== undefined) {
-      problems.push("contrato divergente: 'data.battery' não é objeto");
+      problems.push("contract mismatch: 'data.battery' is not an object");
     }
 
     const statusRaw = dataRaw["status"];
@@ -580,15 +580,15 @@ export function parseTelemetry(payload: unknown): Parsed<TelemetryPayload> {
       const status = parseStatusBlock(statusRaw);
       if (status) data.status = status;
     } else if (statusRaw !== undefined) {
-      problems.push("contrato divergente: 'data.status' não é objeto");
+      problems.push("contract mismatch: 'data.status' is not an object");
     }
   }
 
   if (typeof payload["telemetry_valid"] !== "boolean") {
-    problems.push("contrato divergente: 'telemetry_valid' ausente ou não booleano");
+    problems.push("contract mismatch: 'telemetry_valid' missing or not boolean");
   }
   if (typeof payload["stale"] !== "boolean") {
-    problems.push("contrato divergente: 'stale' ausente ou não booleano");
+    problems.push("contract mismatch: 'stale' missing or not boolean");
   }
   if (!communication) {
     return { ok: false, problems, raw: payload };
@@ -614,10 +614,10 @@ export function parseTelemetry(payload: unknown): Parsed<TelemetryPayload> {
 export function parseIdentity(payload: unknown): Parsed<IdentityPayload> {
   const problems: string[] = [];
   if (!isRecord(payload)) {
-    return { ok: false, problems: ["identificação: resposta não é um objeto JSON"], raw: {} };
+    return { ok: false, problems: ["identity: response is not a JSON object"], raw: {} };
   }
   if (!envelope(payload, problems) || typeof payload["device_id"] !== "string") {
-    return { ok: false, problems: [...problems, "identificação sem 'device_id'"], raw: payload };
+    return { ok: false, problems: [...problems, "identity without 'device_id'"], raw: payload };
   }
   const communication = parseCommunication(payload["communication"], problems) ?? undefined;
   const dataRaw = payload["data"];
@@ -647,7 +647,7 @@ export function parseIdentity(payload: unknown): Parsed<IdentityPayload> {
       };
     }
   } else if (dataRaw !== null && dataRaw !== undefined) {
-    problems.push("contrato divergente: 'data' da identificação não é objeto nem null");
+    problems.push("contract mismatch: 'data' of the identity is neither an object nor null");
   }
 
   return {
@@ -669,19 +669,19 @@ export function parseIdentity(payload: unknown): Parsed<IdentityPayload> {
 export function parseDevices(payload: unknown): Parsed<DevicesPayload> {
   const problems: string[] = [];
   if (!isRecord(payload)) {
-    return { ok: false, problems: ["equipamentos: resposta não é um objeto JSON"], raw: {} };
+    return { ok: false, problems: ["devices: response is not a JSON object"], raw: {} };
   }
   if (!envelope(payload, problems)) {
     return { ok: false, problems, raw: payload };
   }
   const listRaw = payload["devices"];
   if (!Array.isArray(listRaw)) {
-    return { ok: false, problems: [...problems, "equipamentos: 'devices' ausente"], raw: payload };
+    return { ok: false, problems: [...problems, "devices: 'devices' missing"], raw: payload };
   }
   const devices: DeviceEntry[] = [];
   listRaw.forEach((item, index) => {
     if (!isRecord(item) || typeof item["device_id"] !== "string") {
-      problems.push(`equipamentos[${index}] sem 'device_id' textual; ignorado`);
+      problems.push(`devices[${index}] without a textual 'device_id'; ignored`);
       return;
     }
     const capabilities = parseDeviceCapabilities(item["capabilities"]);
@@ -718,24 +718,24 @@ export function parseDevices(payload: unknown): Parsed<DevicesPayload> {
 export function parseHealth(payload: unknown): Parsed<HealthPayload> {
   const problems: string[] = [];
   if (!isRecord(payload)) {
-    return { ok: false, problems: ["saúde: resposta não é um objeto JSON"], raw: {} };
+    return { ok: false, problems: ["health: response is not a JSON object"], raw: {} };
   }
   if (!envelope(payload, problems) || typeof payload["status"] !== "string") {
-    return { ok: false, problems: [...problems, "saúde sem 'status'"], raw: payload };
+    return { ok: false, problems: [...problems, "health without 'status'"], raw: payload };
   }
   const checkedAt = optionalString(payload["checked_at_utc"]);
   const uptime = optionalNumber(payload["uptime_seconds"]);
   const devicesTotal = optionalNumber(payload["devices_total"]);
   const devicesOk = optionalNumber(payload["devices_ok"]);
 
-  // Contrato 2.0: o health é agregado por device_id em `devices`.
+  // Contract 2.0: health is aggregated by device_id in `devices`.
   let devices: Record<string, HealthDeviceStatus> | undefined;
   const devicesRaw = payload["devices"];
   if (isRecord(devicesRaw)) {
     devices = {};
     for (const [deviceId, entryRaw] of Object.entries(devicesRaw)) {
       if (!isRecord(entryRaw)) {
-        problems.push(`saúde: 'devices.${deviceId}' não é objeto`);
+        problems.push(`health: 'devices.${deviceId}' is not an object`);
         continue;
       }
       const entry: HealthDeviceStatus = {};
@@ -762,7 +762,7 @@ export function parseHealth(payload: unknown): Parsed<HealthPayload> {
       devices[deviceId] = entry;
     }
   } else if (devicesRaw !== undefined) {
-    problems.push("contrato divergente: 'devices' do health não é objeto");
+    problems.push("contract mismatch: 'devices' of health is not an object");
   }
 
   return {
@@ -782,7 +782,7 @@ export function parseHealth(payload: unknown): Parsed<HealthPayload> {
   };
 }
 
-// --------------------- parsers do teste de bateria (3.0) ---------------------
+// --------------------- battery test parsers (3.0) ----------------------------
 
 function parseStatusBlock(value: UnknownRecord): StatusBlock | null {
   const status: StatusBlock = {};
@@ -805,7 +805,7 @@ function parseStatusBlock(value: UnknownRecord): StatusBlock | null {
   return Object.keys(status).length > 0 ? status : null;
 }
 
-/** Campos numéricos de um bloco (`baseline`, `final`, `measurements`). */
+/** Numeric fields of a block (`baseline`, `final`, `measurements`). */
 function parseNumberRecord(value: unknown): Record<string, number | null> {
   const result: Record<string, number | null> = {};
   if (!isRecord(value)) return result;
@@ -826,7 +826,7 @@ function parseBatteryTestCapabilities(value: UnknownRecord): BatteryTestCapabili
   if (Array.isArray(testTypes)) {
     capabilities.test_types = testTypes.filter((item): item is string => typeof item === "string");
   }
-  // Detalhe por tipo (janela × alvo): preserva apenas os campos publicados.
+  // Detail per type (window × target): preserves only the published fields.
   const typesRaw = value["types"];
   if (isRecord(typesRaw)) {
     const types: Record<string, BatteryTestTypeParams> = {};
@@ -913,7 +913,7 @@ function parseErrorField(value: unknown): ContractError | null {
 
 function parseReportBase(entry: UnknownRecord, problems: string[]): Omit<BatteryTestReport, "samples"> | null {
   if (typeof entry["test_id"] !== "string" || typeof entry["status"] !== "string") {
-    problems.push("teste de bateria: relatório sem 'test_id'/'status' textuais");
+    problems.push("battery test: report without textual 'test_id'/'status'");
     return null;
   }
   const report: Omit<BatteryTestReport, "samples"> = {
@@ -980,14 +980,14 @@ function parseReportBase(entry: UnknownRecord, problems: string[]): Omit<Battery
   return report;
 }
 
-/** `POST .../tests` → 202 (aceite do pedido; a execução é assíncrona). */
+/** `POST .../tests` → 202 (acceptance of the request; execution is asynchronous). */
 export function parseBatteryTestAccept(payload: unknown): Parsed<BatteryTestAccept> {
   const problems: string[] = [];
   if (!isRecord(payload)) {
-    return { ok: false, problems: ["teste de bateria: aceite não é um objeto JSON"], raw: {} };
+    return { ok: false, problems: ["battery test: acceptance is not a JSON object"], raw: {} };
   }
   if (typeof payload["test_id"] !== "string" || typeof payload["status"] !== "string") {
-    return { ok: false, problems: ["teste de bateria: aceite sem 'test_id'/'status'"], raw: payload };
+    return { ok: false, problems: ["battery test: acceptance without 'test_id'/'status'"], raw: payload };
   }
   const accepted: BatteryTestAccept = {
     test_id: payload["test_id"],
@@ -1017,7 +1017,7 @@ export function parseBatteryTestAccept(payload: unknown): Parsed<BatteryTestAcce
 export function parseBatteryTestAbort(payload: unknown): Parsed<BatteryTestAbort> {
   const problems: string[] = [];
   if (!isRecord(payload) || typeof payload["test_id"] !== "string") {
-    return { ok: false, problems: ["teste de bateria: cancelamento sem 'test_id'"], raw: {} };
+    return { ok: false, problems: ["battery test: cancellation without 'test_id'"], raw: {} };
   }
   return {
     ok: true,
@@ -1031,15 +1031,15 @@ export function parseBatteryTestAbort(payload: unknown): Parsed<BatteryTestAbort
   };
 }
 
-/** `GET .../tests/{test_id}` → 200 (relatório, parcial enquanto `running`). */
+/** `GET .../tests/{test_id}` → 200 (report, partial while `running`). */
 export function parseBatteryTestReport(payload: unknown): Parsed<BatteryTestReport> {
   const problems: string[] = [];
   if (!isRecord(payload)) {
-    return { ok: false, problems: ["teste de bateria: relatório não é um objeto JSON"], raw: {} };
+    return { ok: false, problems: ["battery test: report is not a JSON object"], raw: {} };
   }
   const testRaw = payload["test"];
   if (!isRecord(testRaw)) {
-    return { ok: false, problems: ["teste de bateria: relatório sem o bloco 'test'"], raw: payload };
+    return { ok: false, problems: ["battery test: report without the 'test' block"], raw: payload };
   }
   const base = parseReportBase(testRaw, problems);
   if (!base) return { ok: false, problems, raw: payload };
@@ -1053,7 +1053,7 @@ export function parseBatteryTestReport(payload: unknown): Parsed<BatteryTestRepo
         const parsed: BatteryTestSample = {};
         const offset = optionalNumber(sample["offset_s"]);
         if (offset !== undefined) parsed.offset_s = offset;
-        // `normalized` é a base dos gráficos: preservado como veio, sem renomear.
+        // `normalized` is the basis of the charts: preserved as it came, without renaming.
         if (isRecord(sample["normalized"])) {
           parsed.normalized = parseNumberRecord(sample["normalized"]);
         }
@@ -1078,23 +1078,23 @@ export function parseBatteryTestReport(payload: unknown): Parsed<BatteryTestRepo
   return { ok: true, value: report, problems, raw: payload };
 }
 
-/** `GET .../tests?limit=N` → 200 (histórico, sem a série de amostras). */
+/** `GET .../tests?limit=N` → 200 (history, without the sample series). */
 export function parseTestsList(payload: unknown): Parsed<TestsListPayload> {
   const problems: string[] = [];
   if (!isRecord(payload)) {
-    return { ok: false, problems: ["testes: resposta não é um objeto JSON"], raw: {} };
+    return { ok: false, problems: ["tests: response is not a JSON object"], raw: {} };
   }
   if (typeof payload["device_id"] !== "string") {
-    return { ok: false, problems: ["testes: resposta sem 'device_id'"], raw: payload };
+    return { ok: false, problems: ["tests: response without 'device_id'"], raw: payload };
   }
   const listRaw = payload["tests"];
   if (!Array.isArray(listRaw)) {
-    return { ok: false, problems: [...problems, "testes: 'tests' ausente"], raw: payload };
+    return { ok: false, problems: [...problems, "tests: 'tests' missing"], raw: payload };
   }
   const tests: BatteryTestListItem[] = [];
   listRaw.forEach((item, index) => {
     if (!isRecord(item)) {
-      problems.push(`testes[${index}] não é objeto; ignorado`);
+      problems.push(`tests[${index}] is not an object; ignored`);
       return;
     }
     const base = parseReportBase(item, problems);

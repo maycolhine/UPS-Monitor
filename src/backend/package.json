@@ -1,8 +1,8 @@
 {
-  "name": "@ups-viewer/backend",
+  "name": "@ups-monitor/backend",
   "version": "1.0.0",
   "private": true,
-  "description": "Proxy de leitura + validação do contrato da API de telemetria e servidor da interface",
+  "description": "Read-through proxy that validates the telemetry API contract and serves the interface",
   "type": "module",
   "main": "dist/index.js",
   "engines": {

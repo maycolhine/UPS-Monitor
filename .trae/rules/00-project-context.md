@@ -1,51 +1,52 @@
 ---
-description: Contexto, objetivo e limites do projeto UPS Monitor — Web Viewer
+description: Context, goal and boundaries of the UPS Monitor project — Web Viewer
 globs:
 alwaysApply: true
 ---
 
-# 00 — Contexto do projeto
+# 00 — Project context
 
-## O que é
+## What it is
 
-Dashboard web de **leitura** que exibe a telemetria de nobreaks publicada pela API REST local do
-projeto **Monitoramento UPS** (`GET /health`, `GET /api/v1`, `GET /api/v1/ups`,
-`GET /api/v1/ups/{device_id}/telemetry`, `GET /api/v1/ups/{device_id}/identity`) e permite, **por
-ação explícita do usuário**, pedir o teste de bateria do contrato 3.0 (`POST/GET
-/api/v1/ups/{device_id}/tests`): `duration_10s` (janela fixa de ~10 s) ou `discharge_20pct` (descarga
-até a carga chegar a 20 % ou o teto de 30 min, o que vier primeiro — só onde a API o declara). Nenhum
-teste é disparado de forma autônoma.
+A **read-only** web dashboard that displays the telemetry of UPS units published by the local REST API
+of the **UPS Monitor** repository's telemetry service (`monitor/`, package `upsmon`) (`GET /health`,
+`GET /api/v1`, `GET /api/v1/ups`, `GET /api/v1/ups/{device_id}/telemetry`,
+`GET /api/v1/ups/{device_id}/identity`) and allows, **by explicit user action**, requesting the battery
+test of contract 3.0 (`POST/GET /api/v1/ups/{device_id}/tests`): `duration_10s` (fixed window of ~10 s)
+or `discharge_20pct` (discharge until the charge reaches 20 % or the 30 min ceiling, whichever comes
+first — only where the API declares it). No test is triggered autonomously.
 
-O escopo oficial é [UPS_Web_Viewer_Scope.md](../../UPS_Web_Viewer_Scope.md) e deve ser seguido.
-Documentação: [README.md](../../README.md) e [docs/](../../docs).
+The official scope is documented in [README.md](../../README.md). Documentation: [README.md](../../README.md)
+and [docs/](../../docs).
 
-## Contexto de integração
+## Integration context
 
-- O projeto irmão **Monitoramento UPS** lê os nobreaks por USB serial (protocolos `megatec-q1` e
-  `sms-1phase`) e publica a telemetria em HTTP/JSON por uma API unificada. Ele **não** pode ser
-  alterado por este projeto.
-- Já foram validados nobreaks de **dois protocolos**: TS Shara Universal UPS Senoidal 3200VA
-  (`device_id` `tsshara-3200va-01`, `/dev/ttyACM0`, `0483:5740`, `megatec-q1`) e SMS Power Sinus
-  NG uPS3200S (`sms-ups3200s-01`, USB-Serial, `sms-1phase`). O projeto **não deve se limitar** a
-  esses modelos: novas marcas/modelos devem funcionar sem alterar o frontend.
-- Consequência prática: nada de marca/modelo fixo em código. Os equipamentos são descobertos em
-  `GET /api/v1/ups` (a API unificada publica N nobreaks, em protocolos diferentes) e a interface
-  permite escolher **um por vez** (`GET /api/dashboard?device_id=`); os campos são lidos pelo contrato.
+- The `monitor/` service (package `upsmon`) reads the UPS units over USB serial (protocols `megatec-q1`
+  and `sms-1phase`) and publishes the telemetry over HTTP/JSON through a unified API. The web viewer
+  (`src/backend` + `src/frontend`) lives in the same repository; it reads the API over HTTP and does
+  **not** touch the USB/serial layer.
+- UPS units of **two protocols** have already been validated: TS Shara Universal UPS Senoidal 3200VA
+  (`device_id` `tsshara-3200va-01`, `/dev/ttyACM0`, `0483:5740`, `megatec-q1`) and SMS Power Sinus
+  NG uPS3200S (`sms-ups3200s-01`, USB-Serial, `sms-1phase`). The project **must not limit itself** to
+  these models: new brands/models must work without changing the frontend.
+- Practical consequence: no fixed brand/model in code. The devices are discovered in
+  `GET /api/v1/ups` (the unified API publishes N UPS units, on different protocols) and the interface
+  allows choosing **one at a time** (`GET /api/dashboard?device_id=`); the fields are read through the
+  contract.
 
-## Limites de responsabilidade (não ultrapassar)
+## Responsibility boundaries (do not exceed)
 
-O Web Viewer **não**:
+The Web Viewer does **not**:
 
-- lê ou controla a porta USB;
-- implementa os protocolos dos nobreaks (Megatec/Q1, `sms-1phase`);
-- executa o coletor serial ou envia comandos/desligamento ao nobreak — o **pedido** de teste de
-  bateria é repassado à API de origem (que comanda o equipamento), e só por ação do usuário;
-- altera a API de origem ou seus arquivos;
-- persiste histórico nesta versão (o histórico de testes vive em memória na API de origem);
-- configura o Zabbix;
-- expõe a API diretamente à internet.
+- read or control the USB port;
+- implement the UPS protocols (Megatec/Q1, `sms-1phase`);
+- run the serial collector or send commands/shutdown to the UPS unit — the battery test **request** is
+  forwarded to the telemetry service (which commands the device), and only by user action;
+- modify the telemetry service or its files;
+- persist history in this version (the test history lives in memory in the telemetry service);
+- configure Zabbix;
+- expose the API directly to the internet.
 
-## Idioma
+## Language
 
-Todo o projeto — código, comentários, mensagens de erro, interface e documentação — em
-**português do Brasil**.
+The entire project — code, comments, error messages, interface and documentation — in **English**.

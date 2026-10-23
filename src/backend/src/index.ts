@@ -1,8 +1,8 @@
 /**
- * Ponto de entrada do backend do Web Viewer.
+ * Entry point of the Web Viewer backend.
  *
- * Configuração por variáveis de ambiente (ver .env.example e docs/operacao-docker.md).
- * Códigos de saída: 2 = configuração inválida, 1 = falha ao escutar a porta.
+ * Configuration via environment variables (see .env.example and docs/docker-operation.md).
+ * Exit codes: 2 = invalid configuration, 1 = failure to listen on the port.
  */
 import { UpstreamApiClient } from "./apiClient.js";
 import { ConfigError, loadConfig, type ViewerConfig } from "./config.js";
@@ -37,18 +37,18 @@ export function start(config: ViewerConfig): { close: () => Promise<void> } {
   });
 
   const server = app.listen(config.httpPort, config.httpHost, () => {
-    logger.info("Web Viewer iniciado", {
+    logger.info("Web Viewer started", {
       url: `http://${config.httpHost}:${config.httpPort}`,
       upstream: config.apiBaseUrl,
-      device_id: config.deviceId === "" ? "(descoberta via /api/v1/ups)" : config.deviceId,
+      device_id: config.deviceId === "" ? "(discovery via /api/v1/ups)" : config.deviceId,
       refresh_interval_ms: config.refreshIntervalMs,
-      static_dir: config.staticDir ?? "(nenhum)",
+      static_dir: config.staticDir ?? "(none)",
       endpoints: ["GET /healthz", "GET /api/config", "GET /api/dashboard", "GET /api/devices"],
     });
   });
 
   server.on("error", (error: Error) => {
-    logger.error("falha ao escutar a porta HTTP", { port: config.httpPort, message: error.message });
+    logger.error("failed to listen on the HTTP port", { port: config.httpPort, message: error.message });
     process.exitCode = 1;
     process.exit(1);
   });
@@ -60,7 +60,7 @@ export function start(config: ViewerConfig): { close: () => Promise<void> } {
 
   for (const signal of ["SIGINT", "SIGTERM"] as const) {
     process.on(signal, () => {
-      logger.info("encerrando", { signal });
+      logger.info("shutting down", { signal });
       void close().then(() => process.exit(0));
     });
   }
@@ -74,7 +74,7 @@ function main(): void {
     config = loadConfig();
   } catch (error) {
     const message = error instanceof ConfigError ? error.message : String(error);
-    process.stderr.write(`configuração inválida: ${message}\n`);
+    process.stderr.write(`invalid configuration: ${message}\n`);
     process.exit(2);
   }
   start(config);

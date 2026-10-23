@@ -1,16 +1,16 @@
 /**
- * Tradução dos estados informados pela API (flags do quadro de status e estado
- * da comunicação) para texto em português, com severidade para a leitura visual.
+ * Translation of the states reported by the API (status frame flags and
+ * communication state) into display text, with severity for visual reading.
  *
- * Nenhuma condição é inferida: só é exibido o que a API informa.
- * Em particular, a ausência de `OB` NÃO é apresentada como "rede normal",
- * porque isso exigiria avaliar qualidade e atualidade da leitura.
+ * No condition is inferred: only what the API reports is displayed.
+ * In particular, the absence of `OB` is NOT presented as "normal mains power",
+ * because that would require evaluating the quality and freshness of the reading.
  *
- * ATENÇÃO (contrato 2.0 — multiprotocolo): os bits do quadro têm significado
- * DIFERENTE conforme o protocolo. b5/b4/b3 são `BOOST`/`FAULT`/`STANDBY` no
- * `megatec-q1` e `BYPASS`/`BOOST`/`UPSOK` no `sms-1phase`. Por isso existem
- * duas tabelas e a tabela é escolhida pelo protocolo que originou o quadro
- * (`data.source`), nunca por suposição.
+ * NOTE (contract 2.0 — multiprotocol): the frame bits have a DIFFERENT meaning
+ * depending on the protocol. b5/b4/b3 are `BOOST`/`FAULT`/`STANDBY` in
+ * `megatec-q1` and `BYPASS`/`BOOST`/`UPSOK` in `sms-1phase`. That is why there
+ * are two tables and the table is chosen by the protocol that produced the frame
+ * (`data.source`), never by assumption.
  */
 import { formatAge } from "./format.js";
 import type { CommunicationState, DashboardPayload, TelemetryPayload } from "./contract.js";
@@ -25,127 +25,129 @@ export interface FlagMeta {
 }
 
 /**
- * Ordem e significado das flags do `megatec-q1` (TS Shara), conforme monitor/docs/api-unificada.md §6.3.
+ * Order and meaning of the `megatec-q1` (TS Shara) flags, per
+ * monitor/docs/unified-api.md §6.3.
  *
- * A ordem da lista é FIXA e vai do estado mais tranquilo ao mais crítico. A grade
- * da interface não reordena conforme ativo/inativo: os cards não podem "subir e
- * descer" a cada leitura, senão o usuário não consegue acompanhar a mudança.
+ * The order of the list is FIXED and goes from the calmest state to the most
+ * critical. The interface grid does not reorder based on active/inactive: the
+ * cards must not "move up and down" on every reading, otherwise the user cannot
+ * follow the change.
  */
 export const FLAG_META: FlagMeta[] = [
   {
     id: "BEEP",
-    label: "Alarme sonoro",
-    description: "Alarme sonoro em operação.",
+    label: "Audible alarm",
+    description: "Audible alarm in operation.",
     severity: "warning",
   },
   {
     id: "BOOST",
-    label: "Reforço de tensão",
-    description: "Tensão de entrada baixa, com reforço ativo.",
+    label: "Voltage boost",
+    description: "Low input voltage, with active boost.",
     severity: "warning",
   },
   {
     id: "STANDBY",
     label: "Standby",
-    description: "Modo de espera informado pelo equipamento.",
+    description: "Standby mode reported by the device.",
     severity: "info",
   },
   {
     id: "OB",
-    label: "Operando na bateria",
-    description: "O equipamento está alimentando a carga pela bateria.",
+    label: "Operating on battery",
+    description: "The device is feeding the load from the battery.",
     severity: "warning",
   },
   {
     id: "LB",
-    label: "Bateria baixa",
-    description: "Bateria abaixo do limite indicado pelo equipamento.",
+    label: "Low battery",
+    description: "Battery below the limit indicated by the device.",
     severity: "critical",
   },
   {
     id: "FAULT",
-    label: "Falha",
-    description: "O equipamento informa condição de falha.",
+    label: "Fault",
+    description: "The device reports a fault condition.",
     severity: "critical",
   },
   {
     id: "TEST",
-    label: "Teste em andamento",
-    description: "O equipamento informa que está executando um teste de bateria.",
+    label: "Test in progress",
+    description: "The device reports that it is running a battery test.",
     severity: "info",
   },
   {
     id: "FSD",
-    label: "Desligamento programado",
-    description: "Desligamento programado (fail-safe shutdown) informado pelo equipamento.",
+    label: "Scheduled shutdown",
+    description: "Scheduled shutdown (fail-safe shutdown) reported by the device.",
     severity: "warning",
   },
 ];
 
 /**
- * Flags do `sms-1phase`. b5/b4/b3 significam `BYPASS`/`BOOST`/`UPSOK`, e não os
- * estados do Q1 — reutilizar a tabela do Q1 afirmaria, por exemplo, que o SMS
- * está em "Falha" (bit b4) quando ele informa "Boost/Buck ativo".
+ * Flags of `sms-1phase`. b5/b4/b3 mean `BYPASS`/`BOOST`/`UPSOK`, and not the Q1
+ * states — reusing the Q1 table would state, for example, that the SMS is in
+ * "Fault" (bit b4) when it reports "Boost/Buck active".
  *
- * A ordem da lista também é FIXA: vai do estado mais tranquilo (verde) ao mais
- * crítico (vermelho), passando pelo teste em andamento (azul) e pelo
- * desligamento (amarelo) — a grade não reordena conforme ativo/inativo.
+ * The order of the list is also FIXED: it goes from the calmest state (green) to
+ * the most critical (red), passing through the test in progress (blue) and the
+ * shutdown (yellow) — the grid does not reorder based on active/inactive.
  */
 export const SMS_FLAG_META: FlagMeta[] = [
   {
     id: "BYPASS",
-    label: "Bypass ativo",
-    description: "A carga está ligada diretamente à entrada (bypass).",
+    label: "Bypass active",
+    description: "The load is connected directly to the input (bypass).",
     severity: "warning",
   },
   {
     id: "BEEP",
-    label: "Alarme sonoro",
-    description: "Alarme sonoro em operação.",
+    label: "Audible alarm",
+    description: "Audible alarm in operation.",
     severity: "warning",
   },
   {
     id: "UPSOK",
-    label: "Inversor/rede OK",
-    description: "Inversor e rede operando sem falha informada.",
+    label: "Inverter/mains OK",
+    description: "Inverter and mains operating with no reported fault.",
     severity: "info",
   },
   {
     id: "BOOST",
-    label: "Boost/Buck ativo",
-    description: "Correção ativa da tensão de saída.",
+    label: "Boost/Buck active",
+    description: "Active correction of the output voltage.",
     severity: "info",
   },
   {
     id: "OB",
-    label: "Rede ausente (na bateria)",
-    description: "Rede de entrada ausente; a carga é alimentada pela bateria.",
+    label: "Mains absent (on battery)",
+    description: "Input mains absent; the load is fed from the battery.",
     severity: "warning",
   },
   {
     id: "LB",
-    label: "Bateria baixa",
-    description: "Bateria abaixo do limite indicado pelo equipamento.",
+    label: "Low battery",
+    description: "Battery below the limit indicated by the device.",
     severity: "critical",
   },
   {
     id: "TEST",
-    label: "Teste em andamento",
-    description: "O equipamento informa que está executando um teste de bateria.",
+    label: "Test in progress",
+    description: "The device reports that it is running a battery test.",
     severity: "info",
   },
   {
     id: "FSD",
-    label: "Desligamento ativo",
-    description: "Desligamento (fail-safe) informado pelo equipamento.",
+    label: "Shutdown active",
+    description: "Shutdown (fail-safe) reported by the device.",
     severity: "warning",
   },
 ];
 
 /**
- * Tabela de flags aplicável ao protocolo informado pela API (`data.source`).
- * Protocolo desconhecido mantém a tabela do Q1 — o comportamento anterior — e
- * flags fora da tabela seguem listadas como não documentadas.
+ * Flag table applicable to the protocol reported by the API (`data.source`).
+ * An unknown protocol keeps the Q1 table — the previous behavior — and flags
+ * outside the table remain listed as undocumented.
  */
 export function flagMetaForProtocol(protocol?: string | null): FlagMeta[] {
   return protocol === "sms-1phase" ? SMS_FLAG_META : FLAG_META;
@@ -168,7 +170,7 @@ export function buildFlagViews(
   });
 }
 
-/** Flags desconhecidas (outros modelos/marcas) são exibidas como informativas. */
+/** Unknown flags (other models/brands) are displayed as informational. */
 export function buildUnknownFlagViews(
   flags: Record<string, boolean> | undefined,
   active: string[] | undefined,
@@ -182,29 +184,29 @@ export function buildUnknownFlagViews(
     .map((id) => ({
       id,
       label: id,
-      description: "Estado não documentado no contrato atual.",
+      description: "State not documented in the current contract.",
       severity: "info" as Severity,
       active: flags?.[id] ?? (active ?? []).includes(id),
     }));
 }
 
 /**
- * Tom visual de uma flag do quadro de status.
+ * Visual tone of a flag in the status frame.
  *
- * Diferente da `severity` genérica (crítico/atenção/informativo), o tom é o que
- * a interface pinta na barra lateral de cada card e segue o combinado com o
- * solicitante: verde = operação normal, laranja = rede ausente, vermelho =
- * bateria baixa / falha, azul = teste em andamento, amarelo = desligamento,
- * cinza = estado inativo (nenhum sinal).
+ * Unlike the generic `severity` (critical/warning/informational), the tone is
+ * what the interface paints on the side bar of each card and follows the
+ * agreement with the requester: green = normal operation, orange = mains absent,
+ * red = low battery / fault, blue = test in progress, yellow = shutdown,
+ * gray = inactive state (no signal).
  */
 export type FlagTone = "good" | "warning" | "on_battery" | "critical" | "test" | "neutral";
 
 /**
- * Tom de uma flag considerando se ela está ATIVA.
+ * Tone of a flag considering whether it is ACTIVE.
  *
- * Duas regras fogem do "inativo = cinza": `UPSOK` (inversor/rede) e `BOOST`
- * (boost/buck) — para elas a INATIVIDADE é que é a condição de alerta, então a
- * barra fica vermelha. Nas demais, o card inativo fica cinza.
+ * Two rules depart from "inactive = gray": `UPSOK` (inverter/mains) and `BOOST`
+ * (boost/buck) — for them, INACTIVITY is the alert condition, so the bar turns
+ * red. For the others, the inactive card is gray.
  */
 export function flagTone(flag: FlagView): FlagTone {
   if (!flag.active) {
@@ -227,7 +229,7 @@ export function flagTone(flag: FlagView): FlagTone {
     case "FSD":
       return "warning";
     default:
-      // Flags ativas fora da tabela conhecida herdam a severidade declarada.
+      // Active flags outside the known table inherit the declared severity.
       return flag.severity === "critical" ? "critical" : flag.severity === "warning" ? "warning" : "good";
   }
 }
@@ -241,32 +243,32 @@ export interface CommunicationView {
 }
 
 const STATE_TEXT: Record<string, { label: string; description: string }> = {
-  starting: { label: "Aguardando leitura", description: "O coletor ainda não concluiu a primeira tentativa." },
-  ok: { label: "Conectado", description: "Última tentativa de coleta bem-sucedida." },
+  starting: { label: "Waiting for reading", description: "The collector has not yet completed the first attempt." },
+  ok: { label: "Connected", description: "Last collection attempt succeeded." },
   stale: {
-    label: "Desatualizado",
-    description: "Última leitura válida mais antiga que o limite configurado no coletor.",
+    label: "Stale",
+    description: "Last valid reading older than the limit configured in the collector.",
   },
   port_unavailable: {
-    label: "Porta indisponível",
-    description: "Porta serial não encontrada ou em uso por outro processo.",
+    label: "Port unavailable",
+    description: "Serial port not found or in use by another process.",
   },
-  permission_denied: { label: "Sem permissão", description: "Usuário do coletor sem acesso à porta serial." },
-  disconnected: { label: "Desconectado", description: "O equipamento foi desconectado durante a operação." },
-  timeout: { label: "Timeout", description: "Sem resposta do equipamento dentro do tempo esperado." },
-  invalid_response: { label: "Resposta inválida", description: "Resposta recebida não contém um quadro Q1." },
-  incomplete_response: { label: "Resposta incompleta", description: "Quadro truncado/incompleto." },
+  permission_denied: { label: "Permission denied", description: "Collector user without access to the serial port." },
+  disconnected: { label: "Disconnected", description: "The device was disconnected during operation." },
+  timeout: { label: "Timeout", description: "No response from the device within the expected time." },
+  invalid_response: { label: "Invalid response", description: "Response received does not contain a Q1 frame." },
+  incomplete_response: { label: "Incomplete response", description: "Truncated/incomplete frame." },
   checksum_error: {
-    label: "Quadro corrompido",
-    description: "Checksum do quadro não confere (protocolo SMS); leitura descartada.",
+    label: "Corrupted frame",
+    description: "Frame checksum does not match (SMS protocol); reading discarded.",
   },
-  parse_error: { label: "Erro de leitura", description: "Campo não numérico ou quadro malformado." },
-  out_of_range: { label: "Fora de faixa", description: "Valor fora da faixa plausível (sanidade)." },
-  serial_error: { label: "Erro serial", description: "Outra falha de I/O na porta serial." },
+  parse_error: { label: "Read error", description: "Non-numeric field or malformed frame." },
+  out_of_range: { label: "Out of range", description: "Value outside the plausible range (sanity)." },
+  serial_error: { label: "Serial error", description: "Another I/O failure on the serial port." },
 };
 
 export function describeCommunicationState(state: string): { label: string; description: string } {
-  return STATE_TEXT[state] ?? { label: state, description: "Estado não documentado no contrato atual." };
+  return STATE_TEXT[state] ?? { label: state, description: "State not documented in the current contract." };
 }
 
 export function communicationLevel(state: string): CommunicationLevel {
@@ -277,11 +279,11 @@ export function communicationLevel(state: string): CommunicationLevel {
 }
 
 /**
- * Nível da bolinha on/off de cada nobreak na lista de dispositivos.
+ * Level of the on/off dot of each UPS in the device list.
  *
- * O item de `GET /api/v1/ups` informa `communication_state` e `telemetry_valid`
- * — os dois juntos dizem se aquele equipamento está entregando leitura agora.
- * Nada é inferido além disso.
+ * The item of `GET /api/v1/ups` reports `communication_state` and
+ * `telemetry_valid` — both together tell whether that device is delivering a
+ * reading right now. Nothing else is inferred.
  */
 export function deviceConnectionLevel(device: {
   communication_state?: string | null;
@@ -292,23 +294,23 @@ export function deviceConnectionLevel(device: {
   return level;
 }
 
-/** Rótulo acessível da bolinha (`aria-label`), já que a cor não é o único sinal. */
+/** Accessible label of the dot (`aria-label`), since color is not the only signal. */
 export function deviceConnectionLabel(device: {
   communication_state?: string | null;
   telemetry_valid?: boolean;
 }): string {
   const level = deviceConnectionLevel(device);
   const stateText = describeCommunicationState(device.communication_state ?? "unknown");
-  const value = level === "ok" ? "Conectado" : level === "warning" ? "Atenção" : "Sem comunicação";
+  const value = level === "ok" ? "Connected" : level === "warning" ? "Warning" : "No communication";
   return `${value}: ${stateText.label}`;
 }
 
 /**
- * Níveis visuais da bolinha de status de UM nobreak na lista de dispositivos.
+ * Visual levels of the status dot of ONE UPS in the device list.
  *
- * São seis, do mais tranquilo ao mais crítico: cinza (sem dados), azul (teste
- * em andamento), verde (tudo OK), amarelo (algum indicador em alerta), laranja
- * (rede ausente / na bateria) e vermelho (bateria baixa ou indicador crítico).
+ * There are six, from the calmest to the most critical: gray (no data), blue
+ * (test in progress), green (all OK), yellow (some indicator in alert), orange
+ * (mains absent / on battery) and red (low battery or critical indicator).
  */
 export type DeviceStatusLevel = "unknown" | "ok" | "warning" | "on_battery" | "critical" | "test";
 
@@ -318,54 +320,54 @@ interface DeviceStatusText {
 }
 
 /**
- * Texto curto (usado na descrição do item) e longo (`aria-label`) por nível.
- * A cor nunca é o único sinal: o `label` acompanha a bolinha.
+ * Short text (used in the item description) and long text (`aria-label`) per
+ * level. Color is never the only signal: the `label` accompanies the dot.
  */
 const DEVICE_STATUS_TEXT: Record<DeviceStatusLevel, DeviceStatusText> = {
   unknown: {
-    label: "Sem comunicação",
-    description: "Não conectado, não respondendo ou sem telemetria publicada pela API.",
+    label: "No communication",
+    description: "Not connected, not responding, or no telemetry published by the API.",
   },
   ok: {
-    label: "Conectado",
-    description: "Conectado e com todos os indicadores normais.",
+    label: "Connected",
+    description: "Connected with all indicators normal.",
   },
   warning: {
-    label: "Atenção",
-    description: "Algum indicador está em alerta.",
+    label: "Warning",
+    description: "Some indicator is in alert.",
   },
   on_battery: {
-    label: "Na bateria",
-    description: "Rede de entrada ausente; a carga é alimentada pela bateria.",
+    label: "On battery",
+    description: "Input mains absent; the load is fed from the battery.",
   },
   critical: {
-    label: "Alerta crítico",
-    description: "Bateria baixa ou indicador de tensão de saída, frequência ou carga em estado crítico.",
+    label: "Critical alert",
+    description: "Low battery or output voltage, frequency, or load indicator in a critical state.",
   },
   test: {
-    label: "Teste em andamento",
-    description: "O equipamento está executando um teste de bateria.",
+    label: "Test in progress",
+    description: "The device is running a battery test.",
   },
 };
 
 export interface DeviceStatusSignals {
   communication_state?: string | null;
   telemetry_valid?: boolean;
-  /** `false` quando a API não publicou telemetria utilizável para este equipamento. */
+  /** `false` when the API did not publish usable telemetry for this device. */
   hasTelemetry?: boolean;
   testRunning?: boolean;
   onBattery?: boolean;
   batteryLow?: boolean;
-  /** Indicador de tensão de saída, frequência ou carga em estado crítico. */
+  /** Output voltage, frequency, or load indicator in a critical state. */
   criticalMetric?: boolean;
-  /** Qualquer indicador em atenção (não crítico). */
+  /** Any indicator in warning (not critical). */
   warningSignal?: boolean;
 }
 
 /**
- * Nível da bolinha a partir dos sinais observados. A ordem de prioridade vai do
- * mais específico ao mais genérico: sem comunicação vence tudo; depois teste em
- * andamento, alerta crítico, rede ausente, alerta e, por fim, tudo OK.
+ * Level of the dot from the observed signals. The priority order goes from the
+ * most specific to the most generic: no communication wins over everything; then
+ * test in progress, critical alert, mains absent, warning and, finally, all OK.
  */
 export function deviceStatusLevel(input: DeviceStatusSignals): DeviceStatusLevel {
   const connected = deviceConnectionLevel(input) === "ok" && (input.hasTelemetry ?? true);
@@ -387,9 +389,9 @@ export function deviceStatusView(input: DeviceStatusSignals): DeviceStatusView {
 }
 
 /**
- * Estado de comunicação exibido no cabeçalho, combinando:
- *  - resposta de telemetria da API (com `stale`/`communication`);
- *  - falha de transporte do backend (`viewer.upstream`).
+ * Communication state shown in the header, combining:
+ *  - the telemetry response from the API (with `stale`/`communication`);
+ *  - the backend transport failure (`viewer.upstream`).
  */
 export function describeCommunication(
   telemetry: TelemetryPayload | null,
@@ -400,14 +402,14 @@ export function describeCommunication(
     if (upstreamError) {
       return {
         level: "down",
-        label: "Sem comunicação com a API",
+        label: "No communication with the API",
         description: upstreamError.message,
       };
     }
     return {
       level: "down",
-      label: "Sem dados do equipamento",
-      description: "A API respondeu, mas não há telemetria utilizável neste momento.",
+      label: "No data from the device",
+      description: "The API responded, but there is no usable telemetry right now.",
     };
   }
 
@@ -418,8 +420,8 @@ export function describeCommunication(
   if (telemetry.stale) {
     return {
       level: "stale",
-      label: "Desatualizado",
-      description: `Última leitura válida há ${formatAge(age)}. Exibida como desatualizada.`,
+      label: "Stale",
+      description: `Last valid reading ${formatAge(age)} ago. Displayed as stale.`,
     };
   }
   if (state !== "ok") {
@@ -433,18 +435,18 @@ export function describeCommunication(
   if (!telemetry.data_available) {
     return {
       level: "warning",
-      label: "Sem dados",
-      description: "Coleta ativa, mas sem leitura válida publicada pela API.",
+      label: "No data",
+      description: "Collection active, but no valid reading published by the API.",
     };
   }
   return {
     level: "ok",
-    label: "Conectado",
-    description: `Leitura válida há ${formatAge(age)}.`,
+    label: "Connected",
+    description: `Valid reading ${formatAge(age)} ago.`,
   };
 }
 
 export function communicationStateForDetails(state: CommunicationState | undefined): string {
-  if (!state) return "desconhecido";
+  if (!state) return "unknown";
   return describeCommunicationState(state.state).label;
 }

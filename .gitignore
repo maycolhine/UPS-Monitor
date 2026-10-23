@@ -1,18 +1,27 @@
-# Dependências
+# Dependencies
 node_modules/
 
-# Artefatos de build
+# Build artifacts
 dist/
 *.tsbuildinfo
 
-# Configuração local (pode conter endereços/portas específicos da rede)
+# Local configuration (may contain network-specific addresses/ports)
 .env
 .env.local
 
-# Cobertura de testes / temporários
+# Test coverage / temporary files
 coverage/
 *.log
 .DS_Store
 
-# Arquivos compartilhados entre projetos
-monitor/
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Local logs and captures
+logs/*.log
+logs/*.txt
+captures/

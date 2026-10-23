@@ -1,4 +1,4 @@
-# Tudo que não deve entrar no contexto de build
+# Everything that must not enter the build context
 node_modules
 **/node_modules
 **/dist
@@ -21,3 +21,10 @@ compose.yaml
 docker-compose.yml
 *.md
 !README.md
+
+# Not part of the Node build (Python monitor and per-device knowledge bases)
+monitor
+SMS
+TS_Shara
+scripts
+**/__pycache__

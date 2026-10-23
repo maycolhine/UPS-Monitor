@@ -1,13 +1,13 @@
 /**
- * Servidor HTTP falso que imita a API de telemetria para os testes automatizados.
- * Ele NÃO abre porta serial: apenas responde o que cada teste configurar.
+ * Fake HTTP server that imitates the telemetry API for the automated tests.
+ * It does NOT open a serial port: it only answers what each test configures.
  */
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 
 export interface RecordedRequest {
   method: string;
   url: string;
-  /** Corpo já lido em texto (vazio nos GET) — prova o que o viewer enviou. */
+  /** Body already read as text (empty on GET) — proves what the viewer sent. */
   body: string;
 }
 
@@ -48,7 +48,7 @@ export async function startFakeUpstream(handler: FakeHandler): Promise<FakeUpstr
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
   if (address === null || typeof address === "string") {
-    throw new Error("não foi possível obter a porta do servidor falso");
+    throw new Error("could not obtain the fake server port");
   }
 
   return {
@@ -71,7 +71,7 @@ export function respondJson(res: ServerResponse, status: number, payload: unknow
   res.end(body);
 }
 
-/** Rota simples por caminho, com fallback 404 do contrato. */
+/** Simple route by path, with the contract 404 fallback. */
 export function routeByPath(
   routes: Record<string, { status: number; payload: unknown }>,
   fallback: { status: number; payload: unknown },

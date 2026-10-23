@@ -1,9 +1,9 @@
 /**
- * Avisos do topo do painel: modo demonstração, falha de transporte,
- * telemetria ausente/desatualizada e faixas provisórias.
+ * Notices at the top of the panel: demo mode, transport failure, missing/stale
+ * telemetry and provisional bands.
  *
- * Cada aviso distingue explicitamente "API indisponível" de "telemetria
- * desatualizada" (critério de aceite do escopo §10).
+ * Each notice explicitly distinguishes "API unavailable" from "stale telemetry"
+ * (acceptance criterion of scope §10).
  */
 import type { DashboardPayload, TelemetryPayload } from "../model/contract.js";
 import { formatAge } from "../model/format.js";
@@ -24,7 +24,7 @@ export interface NoticesInput {
   thresholdProblems: string[];
 }
 
-/** Monta a lista de avisos a partir do estado atual (função pura, testável). */
+/** Builds the list of notices from the current state (pure, testable function). */
 export function buildNotices(input: NoticesInput): Notice[] {
   const notices: Notice[] = [];
   const viewer = input.dashboard?.viewer ?? null;
@@ -34,9 +34,9 @@ export function buildNotices(input: NoticesInput): Notice[] {
     notices.push({
       id: "demo",
       level: "warning",
-      title: "MODO DEMONSTRAÇÃO",
+      title: "DEMO MODE",
       message:
-        "Os valores exibidos são simulados para validar o layout. Não são telemetria do nobreak.",
+        "The values displayed are simulated to validate the layout. They are not telemetry from the UPS.",
     });
   }
 
@@ -44,8 +44,8 @@ export function buildNotices(input: NoticesInput): Notice[] {
     notices.push({
       id: "viewer_fetch",
       level: "critical",
-      title: "Serviço do Web Viewer inacessível",
-      message: `${input.fetchError.message} (código: ${input.fetchError.code})`,
+      title: "Web Viewer service unreachable",
+      message: `${input.fetchError.message} (code: ${input.fetchError.code})`,
     });
   }
 
@@ -54,20 +54,20 @@ export function buildNotices(input: NoticesInput): Notice[] {
     notices.push({
       id: "upstream_unreachable",
       level: "critical",
-      title: "API de telemetria indisponível",
-      message: `${upstreamError.message} (código: ${upstreamError.code}) — endereço consultado: ${viewer?.upstream.base_url ?? "—"}.`,
+      title: "Telemetry API unavailable",
+      message: `${upstreamError.message} (code: ${upstreamError.code}) — address consulted: ${viewer?.upstream.base_url ?? "—"}.`,
     });
   }
 
-  // Erro devolvido pelo backend do Web Viewer sobre a API de origem (502/404).
+  // Error returned by the Web Viewer backend about the origin API (502/404).
   const apiError = upstreamError ? null : (input.dashboard?.error ?? null);
   if (apiError) {
     const deviceMissing = apiError.code === "device_not_found";
     notices.push({
       id: deviceMissing ? "device_not_found" : "api_error",
       level: "critical",
-      title: deviceMissing ? "Equipamento não encontrado na API" : "API de telemetria indisponível",
-      message: `${apiError.message} (código: ${apiError.code}).`,
+      title: deviceMissing ? "Device not found in the API" : "Telemetry API unavailable",
+      message: `${apiError.message} (code: ${apiError.code}).`,
     });
   }
 
@@ -75,11 +75,11 @@ export function buildNotices(input: NoticesInput): Notice[] {
     notices.push({
       id: "no_telemetry",
       level: "warning",
-      title: "Sem telemetria utilizável",
+      title: "No usable telemetry",
       message:
         viewer?.device_id === null
-          ? "Nenhum equipamento foi identificado em /api/v1/ups."
-          : "A API respondeu, mas não publicou uma leitura válida neste momento.",
+          ? "No device was identified in /api/v1/ups."
+          : "The API responded, but has not published a valid reading at this time.",
     });
   }
 
@@ -87,17 +87,17 @@ export function buildNotices(input: NoticesInput): Notice[] {
     notices.push({
       id: "stale",
       level: "warning",
-      title: "Leitura desatualizada",
-      message: `A última leitura válida tem ${formatAge(
+      title: "Stale reading",
+      message: `The last valid reading is ${formatAge(
         telemetry.communication.age_seconds ?? telemetry.data?.age_seconds ?? null,
-      )}. Os valores são exibidos apenas como referência histórica.`,
+      )} old. The values are shown only as a historical reference.`,
     });
   } else if (telemetry && telemetry.data === null) {
     notices.push({
       id: "no_data",
       level: "warning",
-      title: "Sem amostra de telemetria",
-      message: "A API está ativa, mas ainda não há amostra válida publicada.",
+      title: "No telemetry sample",
+      message: "The API is active, but no valid sample has been published yet.",
     });
   }
 
@@ -105,7 +105,7 @@ export function buildNotices(input: NoticesInput): Notice[] {
     notices.push({
       id: "thresholds",
       level: "info",
-      title: "Configuração das faixas dos medidores",
+      title: "Gauge band configuration",
       message: input.thresholdProblems.join(" "),
     });
   }

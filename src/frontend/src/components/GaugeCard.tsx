@@ -1,6 +1,6 @@
 /**
- * Cartão de métrica: envolve o gauge semicircular com o rótulo e o valor
- * secundário opcional (ex.: tensão da bateria no cartão da carga estimada).
+ * Metric card: wraps the semicircular gauge with the label and the optional
+ * secondary value (e.g., battery voltage on the estimated charge card).
  */
 import type { GaugeRenderModel } from "../model/metrics.js";
 import { Gauge } from "./Gauge.js";
